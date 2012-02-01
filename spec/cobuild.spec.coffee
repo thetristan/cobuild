@@ -101,6 +101,15 @@ describe 'Cobuild render system', ->
     r = expect renderer.render 'foo'
     r.toEqual 'TEST_foo_TEST'
 
+  it 'should remove all renderers on a type when calling remove_renderer but not specifying a path', ->
+    result = cobuild.remove_renderer 'test'
+
+    renderer = cobuild.get_renderers 'test'
+    r = expect renderer.length
+    r.toEqual 0
+
+    r = expect result
+    r.toEqual cobuild
 
 describe 'Cobuild build system', ->  
 
@@ -146,7 +155,7 @@ describe 'Cobuild build system', ->
     r.toEqual 'TEST_<html>foo</html>_TEST'
 
   it 'should render an array of files', ->
-    cobuild.build [{
+    result = cobuild.build [{
         source: 'spec/samples/test1.html'
         destination: 'spec/output/test1.html'
       }
@@ -154,6 +163,9 @@ describe 'Cobuild build system', ->
         source: 'spec/samples/test2.html'
         destination: 'spec/output/test2.html'
       }], 'test'
+
+    r = expect result
+    r.toEqual cobuild
 
     r = expect fs.readdirSync("#{__dirname}/output/").length
     r.toEqual 2
@@ -166,7 +178,7 @@ describe 'Cobuild build system', ->
 
 
   it 'should render an array of files w/o specifying a type', ->
-    cobuild.build [{
+    result = cobuild.build [{
         source: 'spec/samples/test1.html'
         destination: 'spec/output/test3.html'
       }
@@ -175,6 +187,9 @@ describe 'Cobuild build system', ->
         destination: 'spec/output/test4.html'
       }]
 
+    r = expect result
+    r.toEqual cobuild
+    
     r = expect fs.readdirSync("#{__dirname}/output/").length
     r.toEqual 4
 
@@ -185,7 +200,7 @@ describe 'Cobuild build system', ->
     r.toEqual "TEST_<html>bar</html>_TEST"
 
   it 'should render an array of files w/ a file-specific type override', ->
-    cobuild.build [{
+    result = cobuild.build [{
         source: 'spec/samples/test1.html'
         destination: 'spec/output/test5.html'
       }
@@ -194,6 +209,9 @@ describe 'Cobuild build system', ->
         destination: 'spec/output/test6.html'
         type: 'foo'
       }]
+
+    r = expect result
+    r.toEqual cobuild
 
     r = expect fs.readdirSync("#{__dirname}/output/").length
     r.toEqual 6
@@ -206,7 +224,7 @@ describe 'Cobuild build system', ->
 
 
   it 'should render an array of files w/ a file-specific options override', ->
-    cobuild.build [{
+    result = cobuild.build [{
         source: 'spec/samples/test1.html'
         destination: 'spec/output/test7.html'
         options:
@@ -220,6 +238,9 @@ describe 'Cobuild build system', ->
         destination: 'spec/output/test8.html'
       }]
 
+    r = expect result
+    r.toEqual cobuild
+
     r = expect fs.readdirSync("#{__dirname}/output/").length
     r.toEqual 8
 
@@ -231,7 +252,7 @@ describe 'Cobuild build system', ->
 
 
   it 'should append content when files share the same destination unless replace is specified', ->
-    cobuild.build [{
+    result = cobuild.build [{
         source: 'spec/samples/test1.html'
         destination: 'spec/output/test9.html'
         options:
@@ -251,6 +272,9 @@ describe 'Cobuild build system', ->
         source: 'spec/samples/test2.html'
         destination: 'spec/output/test10.html'
       }]
+
+    r = expect result
+    r.toEqual cobuild
 
     r = expect fs.readdirSync("#{__dirname}/output/").length
     r.toEqual 10
