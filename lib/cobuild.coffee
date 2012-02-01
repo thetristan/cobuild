@@ -78,6 +78,8 @@ module.exports = class Cobuild
             @build f, type, opts
             return
 
+          return @
+
         # Single file as an object, let's do this
         else
                   
@@ -145,8 +147,11 @@ module.exports = class Cobuild
   
   # Remove a renderer
   remove_renderer: (type, renderer) ->
-    @renderers[type] = _.reject @renderers[type], (r)->
-      r == renderer
+    if renderer
+      @renderers[type] = _.reject @renderers[type], (r)->
+        r == renderer
+    else
+      @renderers[type] = []
     @
 
   
