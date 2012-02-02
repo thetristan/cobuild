@@ -25,6 +25,8 @@ module.exports = class Cobuild
     throw new Error 'Config file must be specified to use cobuild.' unless @config
     @config = require @config
     @renderers = {}
+    @files_rendered = []
+
     @default_opts =
       preprocess: null
       postprocess: null
@@ -96,6 +98,13 @@ module.exports = class Cobuild
             type = file.type
           if file.options != undefined && _.isObject file.options
             opts = _.extend {}, opts, file.options
+
+          # If we're appending, is this the first time we're writing to this file? 
+          # If so, log it and turn off the append feature for our first write
+          if !opts.replace && _.indexOf(@files_rendered, file.source) == -1 
+            opts.replace = true
+            
+          @files_rendered.push file.source
   
           util.save_file "#{@config.base_path}/#{file.destination}", @render(content, type, opts), opts.replace
     

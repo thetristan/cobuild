@@ -29,7 +29,7 @@ _.each fs.readdirSync("#{__dirname}/output/"), (f) ->
 cobuild = null
 
 reset = ->
-  cobuild = new Cobuild "#{__dirname}/config"
+  cobuild = new Cobuild "#{__dirname}/config.coffee"
 
 # START TESTS
 describe 'Cobuild file detection', ->
@@ -156,11 +156,11 @@ describe 'Cobuild build system', ->
 
   it 'should render an array of files', ->
     result = cobuild.build [{
-        source: 'spec/samples/test1.html'
+        source:      'spec/samples/test1.html'
         destination: 'spec/output/test1.html'
       }
       {
-        source: 'spec/samples/test2.html'
+        source:      'spec/samples/test2.html'
         destination: 'spec/output/test2.html'
       }], 'test'
 
@@ -179,17 +179,17 @@ describe 'Cobuild build system', ->
 
   it 'should render an array of files w/o specifying a type', ->
     result = cobuild.build [{
-        source: 'spec/samples/test1.html'
+        source:      'spec/samples/test1.html'
         destination: 'spec/output/test3.html'
       }
       {
-        source: 'spec/samples/test2.html'
+        source:      'spec/samples/test2.html'
         destination: 'spec/output/test4.html'
       }]
 
     r = expect result
     r.toEqual cobuild
-    
+
     r = expect fs.readdirSync("#{__dirname}/output/").length
     r.toEqual 4
 
@@ -201,11 +201,11 @@ describe 'Cobuild build system', ->
 
   it 'should render an array of files w/ a file-specific type override', ->
     result = cobuild.build [{
-        source: 'spec/samples/test1.html'
+        source:      'spec/samples/test1.html'
         destination: 'spec/output/test5.html'
       }
       {
-        source: 'spec/samples/test2.html'
+        source:      'spec/samples/test2.html'
         destination: 'spec/output/test6.html'
         type: 'foo'
       }]
@@ -225,7 +225,7 @@ describe 'Cobuild build system', ->
 
   it 'should render an array of files w/ a file-specific options override', ->
     result = cobuild.build [{
-        source: 'spec/samples/test1.html'
+        source:      'spec/samples/test1.html'
         destination: 'spec/output/test7.html'
         options:
           preprocess: (c,t,o) ->
@@ -234,7 +234,7 @@ describe 'Cobuild build system', ->
             c.charAt(11)
       }
       {
-        source: 'spec/samples/test2.html'
+        source:      'spec/samples/test2.html'
         destination: 'spec/output/test8.html'
       }]
 
@@ -253,23 +253,23 @@ describe 'Cobuild build system', ->
 
   it 'should append content when files share the same destination unless replace is specified', ->
     result = cobuild.build [{
-        source: 'spec/samples/test1.html'
+        source:      'spec/samples/test1.html'
         destination: 'spec/output/test9.html'
         options:
           replace: true
       }
       {
-        source: 'spec/samples/test2.html'
+        source:      'spec/samples/test2.html'
         destination: 'spec/output/test9.html'
         options:
           replace: true
       }
       {
-        source: 'spec/samples/test1.html'
+        source:      'spec/samples/test1.html'
         destination: 'spec/output/test10.html'
       }
       {
-        source: 'spec/samples/test2.html'
+        source:      'spec/samples/test2.html'
         destination: 'spec/output/test10.html'
       }]
 
@@ -280,11 +280,25 @@ describe 'Cobuild build system', ->
     r.toEqual 10
 
     r = expect fs.readFileSync("#{__dirname}/output/test9.html", 'utf-8')
-    #r.toEqual "TEST_<html>bar</html>_TEST"
+    r.toEqual "TEST_<html>bar</html>_TEST"
 
     r = expect fs.readFileSync("#{__dirname}/output/test10.html", 'utf-8')
-    #r.toEqual "TEST_<html>foo</html>_TESTTEST_<html>bar</html>_TEST"
+    r.toEqual "TEST_<html>foo</html>_TESTTEST_<html>bar</html>_TEST"
 
 
+  it 'should copy files it has no idea what else to do with', ->
+    result = cobuild.build {
+      source:      'spec/samples/foo.gif'
+      destination: 'spec/output/bar.gif' 
+      }
+
+
+
+
+  it 'should replace files that it has already copied', ->
+    result = cobuild.build [{
+      source:      'spec/samples/foo.gif'
+      destination: 'spec/output/bar.gif'
+      }]
 
 
