@@ -39,7 +39,7 @@ load_files = (files) ->
 load_file = (file) ->
 
   # Check if the file exists first
-  if !path.existsSync file
+  if !path.existsSync path.resolve file
     throw Error "File #{file} doesn't exist."
 
   # Load it up
@@ -54,7 +54,7 @@ load_file = (file) ->
 # Save text-based file
 save_files = (files, content, replace = false) ->
 
-  # Save a single file
+  # Save a single file 
   if typeof files == 'string'
     save_file files, content, replace
 

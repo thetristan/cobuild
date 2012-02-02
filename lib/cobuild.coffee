@@ -88,7 +88,7 @@ module.exports = class Cobuild
           @validate_file file
 
           # Load up our content
-          content = util.load_files("#{@config.base_path}/#{file.source}").content
+          content = util.load_files("#{@config.base_path}#{file.source}").content
           
           # Determine the type
           type = @get_type(file) unless single_type
@@ -106,7 +106,7 @@ module.exports = class Cobuild
             
           @files_rendered.push file.source
   
-          util.save_file "#{@config.base_path}/#{file.destination}", @render(content, type, opts), opts.replace
+          util.save_file "#{@config.base_path}#{file.destination}", @render(content, type, opts), opts.replace
     
     return
 
