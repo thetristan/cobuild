@@ -1,5 +1,6 @@
 _         = require 'underscore'
 path      = require 'path'
+async     = require 'async'
 util      = require './util'
 
 
@@ -16,9 +17,15 @@ util      = require './util'
 
 module.exports = class Cobuild
 
-  @CobuildRenderer: require './renderer'
-
   constructor: (@config) ->
+
+    
+    
+    
+    
+    
+    
+    
 
     # Load our configuration
     throw new Error 'Config file must be specified to use cobuild.' unless @config
@@ -26,133 +33,216 @@ module.exports = class Cobuild
     @renderers        = {}
     @files_rendered   = []
 
-    @default_opts =
-      preprocess: null
-      postprocess: null
-      replace: false
+    @clean_up_config()
 
-    # TODO: Add config validation
+    @default_opts =
+      preprocess:   null
+      postprocess: null
+      replace:     false
+      config:      @config
+
 
 
 
   # -------------------------------------------
-  # Build methods
+  # Config validation and cleanup
+
+  clean_up_config: ->
+
+    @config.base_path = path.resolve(@config.base_path) + '/'
+
+
+
+
+  # -------------------------------------------
+  # Build+render methods
+
+  _build_string: (params, callback) ->      
+
+    if !params.type?
+      callback 'You must specify a type if passing a string to the build method', null
+      return @
+    if !@validate_type params.type
+      callback "No valid renderers added for '#{params.type}' files", null
+      return @
+
+    # Render our content
+    @render params.string, params.type, params.options, callback
+    return @
+
+
+
+
+  _build_single_file: (params, callback) ->
+    
+    # Determine the type
+    type = params.type if params.type? 
+    type or= @get_type(params.file)
+
+    if !@validate_type type
+      callback "No valid renderers added for '#{type}' files", null
+      return @
+
+    params.options.file = 
+      source: params.file
+      destination: null
+      type: type 
+      options: params.options
+
+    util.load_file "#{@config.base_path}/#{params.file}", 
+      (err, file)=>
+        @render file.content, type, params.options, callback
+        return
+
+    return @
+
+
+
+
+  _build_single_file_object: (params, callback) ->
+
+    
+
+    @validate_file params.file
+    
+    # Determine the type
+    type = params.type if params.type? 
+    type or= @get_type(params.file)
+
+    
+
+    # Do we have any file-specific overrides?
+    if params.file.type? and _.isString params.file.type
+      type = params.file.type
+    if params.file.options? and _.isObject params.file.options
+      params.options = _.extend {}, params.options, params.file.options
+
+    params.options.file = params.file
+    source      = "#{@config.base_path}#{params.file.source}"
+    destination = "#{@config.base_path}#{params.file.destination}"
+
+    # If it's a valid type, let's do our transform
+    if @validate_type type
+
+      # Load up our content
+      util.load_files source, 
+        (err, file)=>
+
+
+          # If we're appending, is this the first time we're writing to this file? 
+          # If so, log it and turn off the append feature for our first write
+          if !params.options.replace && _.indexOf(@files_rendered, params.file.source) == -1 
+            params.options.replace = true
+            
+          @files_rendered.push params.file.source
+
+          @render file.content, type, params.options, 
+            (err, content)->
+              
+              util.save_file destination, content, params.options.replace, callback
+              return
+
+          return
+    
+    
+    # Otherwise, copy the file to its destination
+    else
+      util.copy_file source, destination, params.options.replace, callback
+
+    return @
+
+
+
+
+  _build_multiple_files: (params, callback) ->
+
+    
+
+    # Build each file
+    async.forEachSeries params.files, 
+      (f, next)=>
+        
+        @build { file: f, type: params.type, options: params.options }, ->
+          next()
+        return
+      (err)->
+        
+        callback err
+        return
+
+    return @
+
+
+
 
   # Build one or more files with 
-  build: (file, type, opts) ->
+  build: (params, callback) ->
 
-    # Use a preset type or attempt to detect it?
-    single_type = _.isString type
+    
 
-    # Load a single file or an array of files?
-    single_file = _.isString(file) and @get_type(file) != ""
+    single_string    = params.string?
+    single_file      = params.file? and _.isString params.file
+    single_file_obj  = params.file? and !_.isString params.file
+    multi_file       = params.files? and _.isArray params.files
 
-    # Maybe we're just loading a string to transform?
-    single_string = _.isString(file) and @get_type(file) == ""
+    
 
-    # We can use the second param as our options if we didn't specify a type string
-    opts or= type unless type instanceof String
-    opts or= {}
+    params.options or= {}
+    _.defaults params.options, @default_opts
 
-    _.defaults opts, @default_opts
-
-    # Done cleaning up, let's build out some files
+    callback or= ->
 
     # Single-string mode
     if single_string
-      throw new Error 'You must specify a type if passing a string to the build method' unless single_type
-      
-      # Render our content
-      return @render file, type, opts
+      return @_build_string params, callback
 
+    # Single-file as a string mode
+    if single_file
+      return @_build_single_file params, callback
 
-    else
+    # Multiple file objects passed as an array
+    if multi_file
+      return @_build_multiple_files params, callback
 
-      # Single-file as a string mode
-      if single_file  
+    # Single file as an object
+    if single_file_obj
+      return @_build_single_file_object params, callback        
 
-        type = @get_type(file) unless single_type
-        if !@validate_type type
-          throw new Error "No valid renderers added for '#{type}' files"
-
-        content = util.load_file("#{@config.base_path}/#{file}").content
-        return @render content, type, opts
-
-
-      # Multiple files or single-file as an object mode
-      else
-
-        # Multiple file objects passed as an array
-        if _.isArray(file) 
-
-          # Build each file
-          _.each file, (f)=>
-
-            @build f, type, opts
-            return
-
-          return @
-
-
-        # Single file as an object
-        else
-                  
-          @validate_file file
-
-          # Determine the type
-          type = @get_type(file) unless single_type
-
-          # Do we have any file-specific overrides?
-          if file.type != undefined && _.isString file.type
-            type = file.type
-          if file.options != undefined && _.isObject file.options
-            opts = _.extend {}, opts, file.options
-
-
-          # If it's a valid type, let's do our transform
-          if @validate_type type
-
-            # Load up our content
-            content = util.load_files("#{@config.base_path}#{file.source}").content
-
-            # If we're appending, is this the first time we're writing to this file? 
-            # If so, log it and turn off the append feature for our first write
-            if !opts.replace && _.indexOf(@files_rendered, file.source) == -1 
-              opts.replace = true
-              
-            @files_rendered.push file.source
-    
-            util.save_file "#{@config.base_path}#{file.destination}", @render(content, type, opts), opts.replace
-          
-          
-          # Otherwise, copy the file to its destination
-          else
-            util.copy_file "#{@config.base_path}#{file.source}", "#{@config.base_path}#{file.destination}", opts.replace
-
-
-
-    return
+    return @
 
 
   # Render text via one of our preset renderers
-  render: (content, type, opts) -> 
+  render: (content, type, opts, callback) -> 
     
     renderers = @get_renderers type
 
-    # Do we need to preprocess content?
-    if opts.preprocess instanceof Function
-        content = opts.preprocess content, type, opts
-    
-    # Process content
-    content = _.reduce renderers, (current_content, current_renderer)->
-      current_renderer?.render? current_content, opts
-    , content
+    async.waterfall [
 
-    # Do we need to postprocess content?
-    if opts.postprocess instanceof Function
-        content = opts.postprocess content, type, opts
-    
-    content
+      # Preprocesing?
+      (next)->
+        if _.isFunction opts.preprocess
+          opts.preprocess content, type, opts, next
+        else
+          next null, content
+
+      # Main rendering loop
+      (content, next)->
+        async.reduce renderers, content, 
+          (curr_content, curr_renderer, cb)->
+            curr_renderer?.render? curr_content, type, opts, cb
+            return
+          next
+
+      # Postprocessing?
+      (content, next)->
+        if _.isFunction opts.postprocess
+          content = opts.postprocess content, type, opts, next
+        else
+          next null, content
+
+    ], callback
+
+    return
 
 
 
@@ -166,14 +256,21 @@ module.exports = class Cobuild
 
   # Attempt to detect the file type
   get_type: (file) ->
+
     
-    if _.isString file
-      return path.extname(file).replace('.','')
 
-    if _.isObject file
-      return path.extname(file.source).replace('.','')
+    if !_.isString file
+      file = file.source
 
-    ''
+
+    # Check for illegal characters
+    illegals = ['?','<','>','\\',':','*','|','”']
+    has_illegals = _.any file.split(''), (p)->
+      _.include illegals, p
+
+    if has_illegals then return ''
+
+    return path.extname(file).replace('.','')
 
 
   # Validate file to make sure it contains all the needed items.
@@ -185,6 +282,8 @@ module.exports = class Cobuild
     throw new Error 'Options must be specified as an object' if file.options and !_.isObject file.options
 
     true
+
+
 
 
   # -------------------------------------------
@@ -215,11 +314,12 @@ module.exports = class Cobuild
       current_path = "#{@config.base_path}#{@config.renderer_path}#{renderer}"
       result = require current_path
     catch err
-      try 
+      try
         current_path = "#{__dirname}/renderers/#{renderer}"
         result = require current_path
       catch err
         return null
+
 
     result
 
@@ -229,12 +329,13 @@ module.exports = class Cobuild
     renderers = []
 
     _.each @renderers[type], (r, i)=>
-        # If we've already initialized a renderer, skip this
-        if r.renderer instanceof Cobuild.CobuildRenderer
-          renderers.push r.renderer
-        else
-          renderer = @load_renderer r.name
-          r.renderer = new renderer() unless renderer == null
-          renderers.push r.renderer
+      # If we've already initialized a renderer, skip this
+      if _.isFunction r.renderer?.render
+        renderers.push r.renderer
+      else
+        renderer = @load_renderer r.name
+        r.renderer = new renderer() unless renderer == null
+
+        renderers.push r.renderer
 
     renderers

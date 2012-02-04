@@ -1,126 +1,239 @@
-fs   = require 'fs-extra'
-path = require 'path'
-_    = require 'underscore'
+fs     = require 'fs-extra'
+path   = require 'path'
+_      = require 'underscore'
+async  = require 'async'
+
+
+# --------------------------------------------------
+
 
 # Prep the content or load the files
-prep_content = (content)->
+prep_content = (content, callback)->
   # What kind of content are we working with today?
-  if typeof content == 'string'
-    content = [{ 
-      file_name: "-"
-      content: content
-      }]
+  if _.isString content
+    callback null, [
+        file_name: "-"
+        content: content
+      ]
   
-  if content instanceof Array
-    content = load_files content
+  if _.isArray content
+    load_files content, callback
 
-  content
+  return
 
+
+# --------------------------------------------------
 
 
 # Load file contents from an array
-load_files = (files) ->
+load_files = (files, callback) ->
+
+  
 
   # Load file contents from a single file
-  if typeof files == 'string'
-    content = load_file files
+  if _.isString files
+    
+    content = load_file files, callback
 
   # Load file contents from multiple files
-  if files instanceof Array
+  if _.isArray files
+    
     content = []
-    _.each files, (file_name) =>
-      content.push load_file file_name
 
-  content
+    async.forEachSeries files, 
+      (file, next) ->
+        
+        load_file file,
+          (err, data)->
+            content.push data
+            next()
+            return
+        return
+      (err) ->
+        callback err, content
+        return
 
-
-
-# Copy a file
-copy_file = (source, destination, replace) ->
-
-  check_fix_paths destination
-
-  if path.existsSync path.resolve destination
-    if replace
-      fs.unlinkSync destination
-    else
-      throw new Error 'File already exists'
-
-  fs.copyFileSync source, destination
   return
-
 
 
 # Load a single file
-load_file = (file) ->
+load_file = (file, callback) ->
+
+  file = path.resolve file
 
   # Check if the file exists first
-  if !path.existsSync path.resolve file
-    throw Error "File #{file} doesn't exist."
-
-  # Load it up
-  content =
-    file_name: file
-    content: fs.readFileSync file, 'utf-8'  
-
-  content 
-
-
-
-# Save text-based file
-save_files = (files, content, replace = false) ->
-
-  # Save a single file 
-  if typeof files == 'string'
-    save_file files, content, replace
-
-  # Save multiple files
-  if files instanceof Array
-    _.each files, (file) ->
-      save_file file.file_name, file.content, replace
+  path.exists file,
+    (exists)->
+      if !exists
+        callback "File #{file} doesn't exist.", null
+      else
+        
+        fs.readFile file, 'utf-8',
+          (err, data)->
+            
+            
+            callback err, 
+              file_name: file
+              content: data
+            return
+      return
 
   return
 
+
+# --------------------------------------------------
+
+
+# Copy a file
+copy_file = (source, destination, replace = false, callback) ->
+
+  source      = path.resolve source
+  destination = path.resolve destination
+
+  async.series [
+      (next)->
+        check_fix_paths destination, next
+
+      (next)->  
+        path.exists destination, (exists)->
+          if exists
+            if replace
+              fs.unlink destination, next
+              return
+            else
+              console.error 'file exists', callback
+              callback "File #{destination} already exists", false
+              return
+          next()
+          return
+    
+      (next)->
+        fs.copyFile source, destination, next
+        return
+
+    ],
+    (err)->
+      result = true
+      if err then result = false
+      callback err, result
+      return
+
+  return
+
+
+
+
+# --------------------------------------------------
+
+
+# Save text-based file
+save_files = (files, content, replace = false, callback) ->
+  
+  # Save a single file 
+  if _.isString files
+    save_file files, content, replace, callback
+
+  # Save multiple files
+  if _.isArray files
+
+    # Save 'em all
+    async.forEachSeries files, 
+      (file, next) ->
+        save_file file.file_name, file.content, replace, next
+        return
+      (err)->
+        result = true
+        if err then result = false
+        callback(err, result)
+        return
+
+  return
 
 
 
 # Save a single file
-save_file = (file, content, replace = false) ->
+save_file = (file, content, replace = false, callback) ->
 
-  # Check the path first and create any needed files
-  check_fix_paths file
   
   file_mode = 'w'
 
-  # Deal with existing files
-  if path.existsSync file
-    if replace
-      fs.unlinkSync
-    else
-      file_mode = 'a'
+  async.series [
 
-  # Open the file and write the contents back to it
-  fd = fs.openSync file, file_mode
-  fs.writeSync fd, content
-  fs.closeSync fd
+    # Check the path first and create any needed directories
+    (next)->
+      
+      check_fix_paths file, next
+
+    # Deal with any existing files that need to be replaced
+    (next)->
+      
+      path.exists file, (exists)->
+        if exists
+          if replace
+            fs.unlink file, next
+            return
+    
+          file_mode = 'a'
+        next()
+        return
+      return
+
+    # Open the file and write the contents back to it
+    (next)->
+      
+      fs.open file, file_mode, (err, fd)->
+        
+        buffer = new Buffer(content, 'utf-8')
+        fs.write fd, buffer, 0, buffer.length, null, (err, written)->
+          
+          fs.close fd, (err)->
+            
+            next()
+            return
+          return
+        return
+      return
+
+  ],
+  (err)->
+    result = true
+    if err then result = false
+    
+    
+    callback err, result
+    return
+  
+  return
 
 
+# --------------------------------------------------
 
 
 # Check and fix any paths by creating directories as needed
-check_fix_paths = (full_path)->
+check_fix_paths = (full_path, callback)->
 
   current_path = '/'
   full_path    = path.dirname full_path
   path_parts   = full_path.split '/'
   
-  for part in path_parts
-    current_path += "#{part}/"
-    if !path.existsSync current_path
-      fs.mkdirSync current_path
-  
+  async.forEachSeries path_parts, 
+    (part, next) ->
+      current_path += "#{part}/"
+      path.exists current_path, (exists)->
+        if !exists
+          fs.mkdir current_path, '0777', next
+        else
+          next()
+        return
+
+    (err)->
+      callback(err)
+      return
+
   return
 
+
+# --------------------------------------------------
 
 
 # Concatenate our files

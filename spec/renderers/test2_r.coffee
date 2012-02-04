@@ -1,8 +1,6 @@
-CobuildRenderer = require('../../lib/cobuild').CobuildRenderer
-
-module.exports = class Test2_r extends CobuildRenderer
+module.exports = class Test2_r
 
   constructor: ()->
 
-  render: (content, options) ->
-    content.toLowerCase()
+  render: (content, type, options, callback) ->
+    callback null, content.toLowerCase()
