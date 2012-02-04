@@ -23,9 +23,9 @@ module.exports = class Cobuild
 
     # Load our configuration
     throw new Error 'Config file must be specified to use cobuild.' unless @config
-    @config = require @config
-    @renderers = {}
-    @files_rendered = []
+    @config           = require @config
+    @renderers        = {}
+    @files_rendered   = []
 
     @default_opts =
       preprocess: null
@@ -72,7 +72,7 @@ module.exports = class Cobuild
       else
 
         # Did we get an array?
-        if _.isArray(file) and file.length > 1
+        if _.isArray(file) 
 
           # Build each file
           _.each file, (f)=>
@@ -150,15 +150,15 @@ module.exports = class Cobuild
   # Add a custom renderer
   add_renderer: (type, renderer) ->
     @renderers[type] or= []
-    @renderers[type].push renderer
+    @renderers[type].push { name: renderer, renderer: null }
     @
 
   
   # Remove a renderer
   remove_renderer: (type, renderer) ->
     if renderer
-      @renderers[type] = _.reject @renderers[type], (r)->
-        r == renderer
+      @renderers[type] = _.reject @renderers[type], (r,i)->
+        r.name == renderer
     else
       @renderers[type] = []
     @
@@ -180,17 +180,22 @@ module.exports = class Cobuild
 
     result
 
+
   # Load and initialize the renderer we want to use
   get_renderers: (type) ->    
     renderers = []
 
     _.each @renderers[type], (r, i)=>
         # If we've already initialized a renderer, skip this
-        if !(r instanceof Cobuild.CobuildRenderer)
-          r = @load_renderer r
-          renderers.push new r() unless r == null
-    
+        if r.renderer instanceof Cobuild.CobuildRenderer
+          renderers.push r.renderer
+        else
+          renderer = @load_renderer r.name
+          r.renderer = new renderer() unless renderer == null
+          renderers.push r.renderer
+
     renderers
+
 
   # Validate file to make sure it contains all the needed items.
   validate_file: (file) ->

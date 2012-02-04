@@ -54,15 +54,25 @@ describe 'Cobuild render system', ->
       .add_renderer('test', "test_r")
       .add_renderer('test', "test2_r")
 
-  it 'should add three new renderers to the "test" type', ->
-    result = cobuild.add_renderer('test', "foo_r")
+    @addMatchers
+      toContainRendererNamed: (expected)->
+        _.any @actual, (a)->
+          true if a.name == expected
+
+
+  it 'should add three new renderers to the "test" type, but only two should work', ->
+    result = cobuild
+      .add_renderer('test', "foo_r")      
+    
+    cobuild.get_renderers('test')
+
     r = expect result
     r.toEqual cobuild
 
     r = expect cobuild.renderers['test']
-    r.toContain 'test_r'
-    r.toContain 'test2_r'
-    r.toContain 'foo_r'
+    r.toContainRendererNamed 'test_r'
+    r.toContainRendererNamed 'test2_r'
+    r.toContainRendererNamed 'foo_r'
     
     r = expect cobuild.renderers['test'].length
     r.toEqual 3
@@ -71,15 +81,16 @@ describe 'Cobuild render system', ->
     result = cobuild
       .remove_renderer('test', 'test2_r')
       .remove_renderer('test', 'foo_r')
-
-    renderers = cobuild.renderers['test']
+      
+    cobuild.get_renderers('test')
 
     r = expect result
     r.toEqual cobuild
 
-    r = expect renderers
-    r.toContain 'test_r'
-    r = expect renderers.length
+    r = expect cobuild.renderers['test']
+    r.toContainRendererNamed 'test_r'
+    r = expect cobuild.renderers['test'].length
+    r.toEqual 1
     r.toEqual 1
 
   it 'should return null loading an unknown renderer', ->
@@ -286,12 +297,12 @@ describe 'Cobuild build system', ->
     r.toEqual "TEST_<html>foo</html>_TESTTEST_<html>bar</html>_TEST"
 
 
+
   it 'should copy files it has no idea what else to do with', ->
     result = cobuild.build {
       source:      'spec/samples/foo.gif'
       destination: 'spec/output/bar.gif' 
       }
-
 
 
 
