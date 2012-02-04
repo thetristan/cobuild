@@ -16,8 +16,6 @@ util      = require './util'
 
 module.exports = class Cobuild
 
-  @CobuildRenderer: require './renderer'
-
   constructor: (@config) ->
 
     # Load our configuration
@@ -27,9 +25,10 @@ module.exports = class Cobuild
     @files_rendered   = []
 
     @default_opts =
-      preprocess: null
+      preprocess:   null
       postprocess: null
-      replace: false
+      replace:     false
+      config:      @config
 
     # TODO: Add config validation
 
@@ -60,8 +59,11 @@ module.exports = class Cobuild
 
     # Single-string mode
     if single_string
-      throw new Error 'You must specify a type if passing a string to the build method' unless single_type
       
+      throw new Error 'You must specify a type if passing a string to the build method' unless single_type    
+      throw new Error "No valid renderers added for '#{type}'" unless @validate_type type
+
+
       # Render our content
       return @render file, type, opts
 
@@ -215,7 +217,7 @@ module.exports = class Cobuild
       current_path = "#{@config.base_path}#{@config.renderer_path}#{renderer}"
       result = require current_path
     catch err
-      try 
+      try
         current_path = "#{__dirname}/renderers/#{renderer}"
         result = require current_path
       catch err
@@ -229,12 +231,13 @@ module.exports = class Cobuild
     renderers = []
 
     _.each @renderers[type], (r, i)=>
-        # If we've already initialized a renderer, skip this
-        if r.renderer instanceof Cobuild.CobuildRenderer
-          renderers.push r.renderer
-        else
-          renderer = @load_renderer r.name
-          r.renderer = new renderer() unless renderer == null
-          renderers.push r.renderer
+      # If we've already initialized a renderer, skip this
+      if r.renderer?.render instanceof Function
+        renderers.push r.renderer
+      else
+        renderer = @load_renderer r.name
+        r.renderer = new renderer() unless renderer == null
+
+        renderers.push r.renderer
 
     renderers

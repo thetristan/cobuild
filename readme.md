@@ -28,7 +28,7 @@ Specifying the same destination for multiple text files will allow you to append
       .add_renderer('js', 'uglify_r')     // Stack multiple renderers on the same file type;
       .add_renderer('js', 'uppercase_r')  // content will be rendered in the order you specify
       .build(files, { 
-        minify: true, 
+        minify: true,                     // Specify options to be passed to renderers
         preprocess: function(content, type, options) { 
           return content;  
         }  
@@ -44,26 +44,26 @@ Specifying the same destination for multiple text files will allow you to append
 
 #### add_renderer(`type`, `path_to_render`)
 
-Use this method to add a renderer to the file type specified by `type`. Renderers are loaded (via `require`) on first use, and are loaded from the renderer path sepcified in your config file. . The build method will render each type in the order specified by successive calls to this method.
+Use this method to add a renderer to the file type specified by `type`. Renderers are loaded (via `require`) on first use (via one of the `build` methods below), and they are loaded from the renderer path specified in your config file, or from one of 	. The build method will render each type in the order specified by successive calls to this method.
 
 Returns `this` for chaining
 
-#### build(`content`, `type`, `options`)
-Use Cobuild to render the string `content` using the renderer specified in `type`. `options` is an object containing any extra options that you want passed to the renderer. If a renderer doesn't exist for the provided type, the method will return `false`.
+#### build(`content (string)`, `type`, `options`)
+Use Cobuild to render the string `content` using the renderer specified in `type`. `options` is an object containing any extra options that you want passed to the renderer.  If a renderer doesn't exist for the provided type, the method will throw an exception.
 
-Returns `string`|`boolean`
+Returns `string`
 
-#### build(`file`, `type`, `options`)
-Use Cobuild to load and render`file` using the renderer specified for `type`. `options` is an object containing any extra options that you want passed to the renderer. If a renderer doesn't exist for the provided type, the method will return `false`.
+#### build(`file (string)`, `type`, `options`)
+Use Cobuild to load and render `file` using the renderer specified for `type`. `options` is an object containing any extra options that you want passed to the renderer. If a renderer doesn't exist for the provided type, the method will throw an exception.
 
-Returns `string`|`boolean`
+Returns `string`
 
-#### build(`file`, `options`)
-Use Cobuild to load and render`file`. The renderer to be used will be chosen based on the file extension of `file`. `options` is an object containing any extra options that you want passed to the renderer. If a renderer doesn't exist for the provided type, the method will return `false`.
+#### build(`file (string)`, `options`)
+Use Cobuild to load and render`file`. The renderer to be used will be chosen based on the file extension of `file`. `options` is an object containing any extra options that you want passed to the renderer. If a renderer doesn't exist for the provided type, the method will throw an exception.
 
-Returns `string`|`boolean`
+Returns `string`
 
-#### build(`files`, `type`, `options`)
+#### build(`files (array)`, `type`, `options`)
 Use Cobuild to load, render, and save, all `files` that are passed to the method. `files` is an array of objects that should be formatted as such:
 
 	{
@@ -80,11 +80,13 @@ Use Cobuild to load, render, and save, all `files` that are passed to the method
 		options: { ... } 
 	}
 	
-`options` is an object containing any extra options that you want passed to the renderer. If a renderer doesn't exist for the provided type, the method will replace the destination file with the source without doing any processing.
+`options` is an object containing any extra options that you want passed to the renderer. If a renderer doesn't exist for the provided type, unlike the string/single file methods above, this method will copy the source file to the destination without doing any processing.
+
+If a file object is missing any required information, the method will throw an exception.
 
 Returns `this` for chaining
 
-#### build(files, options)
+#### build(`files (array)`, `options`)
  Use Cobuild to load, render, and save, all `files` that are passed to the method. `files` is an array of objects that should be formatted as such:
 
 	{
@@ -96,14 +98,16 @@ Returns `this` for chaining
 		// be concatenated together in the order they are specified
 		destination: 'release/file.html'
 		
-		// Optional – render with a specific type; overrides the type passed above
+		// Optional – render with a specific type
 		type: 'template'
 		
 		// Optional – render with specific options; overrides the options passed above
 		options: { ... } 
 	}
 	
-The renderer to be used will be chosen based on the file extension of `file`.  If a renderer doesn't exist for the provided filetype, the method will replace the destination file with the source file without doing any processing.
+`options` is an object containing any extra options that you want passed to the renderer. If a renderer doesn't exist for the provided type, unlike the string/single file methods above, this method will copy the source file to the destination without doing any processing.
+
+If a file object is missing any required information, the method will throw an exception.
 
 Returns `this` for chaining
 
@@ -123,7 +127,7 @@ The only three build-related options are callbacks that are ran on pre and post 
 		postprocess: [callback],
 		
 		
-		// Replace files or 
+		// Replace files or append (text-based files), 
 		replace: false (default) | true
 	}
 	
@@ -157,16 +161,17 @@ This is where Cobuild really shines as it's easy to create pluggable renderers w
 
     render(`content`,`options`) {  ...  }
 
-It's your responsiblity to a return the string value of any transformations you make to `content`. If you want to make any parts of your renderer user-configurable, you can just include those options when calling `build` and they'll be made available to your renderer via the `options` parameter.
+It's your responsiblity to a return the string value of any transformations you make to `content`. If you want to make any parts of your renderer user-configurable, you can just include those options when calling `build` and they'll be made available to your renderer via the `options` parameter. In addition, any configuration options set via the cobuild configuration will be included 
 
-By including your renderer in your `renderer_path` (specified in the configuration file you passed to Cobuild during initialization), Cobuild will load and use your renderer when you pass it to the `add_renderer` method.  
+By including your renderer in your `renderer_path` (specified in the configuration file you passed to Cobuild during initialization), Cobuild will use your renderer when you pass it to the `add_renderer` method. The renderer itself will be initialized when it's first used, and it's instance will persist until it's been removed so you can do things like track statistics
+
+To keep naming consistent and make renderers easily identifiable, the official renderers will always have an `_r` suffix at the end of them to. I recommend you do the same with your renderers.
 
 ### Example Renderer
 
 You can always view the renderers in the lib/renderers folder for reference (there are renderers for eco, stylus, and uglify), but here is a quick example of a renderer (in CoffeeScript):
 
-    CobuildRenderer = require('../../lib/cobuild').CobuildRenderer
-    module.exports = class Test2_r extends CobuildRenderer
+    module.exports = class Test2_r
       constructor: ()->
       render: (content, options) ->
         content.toLowerCase()

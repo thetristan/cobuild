@@ -1,6 +1,4 @@
-CobuildRenderer = require('../../lib/cobuild').CobuildRenderer
-
-module.exports = class Test_r extends CobuildRenderer
+module.exports = class Test_r
 
   constructor: ()->
 

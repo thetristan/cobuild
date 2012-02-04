@@ -32,6 +32,9 @@ cobuild = null
 reset = ->
   cobuild = new Cobuild "#{__dirname}/config.coffee"
 
+
+
+
 # START TESTS
 describe 'Cobuild file detection', ->
 
@@ -45,6 +48,8 @@ describe 'Cobuild file detection', ->
   it 'should return nothing when detecting the type of a file w/o an extension', ->
     r = expect cobuild.get_type 'testfile'
     r.toEqual ''
+
+
 
 
 describe 'Cobuild render system', ->
@@ -92,7 +97,6 @@ describe 'Cobuild render system', ->
     r.toContainRendererNamed 'test_r'
     r = expect cobuild.renderers['test'].length
     r.toEqual 1
-    r.toEqual 1
 
   it 'should return null loading an unknown renderer', ->
     r = expect cobuild.load_renderer 'foo'
@@ -105,7 +109,7 @@ describe 'Cobuild render system', ->
 
   it 'should return an instance of CobuildRenderer back if the loader exists', ->
     renderer = cobuild.get_renderers('test')[0]
-    r = expect renderer instanceof Cobuild.CobuildRenderer
+    r = expect renderer.render instanceof Function
     r.toBeTruthy()
 
   it 'should return "TEST_foo_TEST" when directly rendering "foo" via "test_r"', ->
@@ -122,6 +126,9 @@ describe 'Cobuild render system', ->
 
     r = expect result
     r.toEqual cobuild
+
+
+
 
 describe 'Cobuild build system', ->  
 
@@ -354,3 +361,17 @@ describe 'Cobuild build system', ->
     r = expect fs.statSync("#{__dirname}/output/bar2.gif").size
     r.toEqual fs.statSync("#{__dirname}/samples/foo.gif").size
 
+
+
+
+describe 'Built-in eco renderer', ->
+
+  beforeEach ->
+    reset()  
+    cobuild
+      .add_renderer('eco', "eco_r")
+
+  it 'should render an eco template', ->
+    result = cobuild.get_renderers 'eco'
+    r = expect result
+    console.log result

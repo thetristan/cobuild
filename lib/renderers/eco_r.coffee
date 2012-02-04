@@ -11,7 +11,7 @@ fs     = require 'fs'
 * 
 ###
 
-class Template_helpers
+class Eco_helpers
 
   constructor: (@global_vars, @base_path) ->
 
@@ -31,12 +31,12 @@ class Template_helpers
 * 
 ###
 
-module.exports = class Template 
+module.exports = class Eco_r
 
-  constructor: (@content, @global_vars, @base_path) ->
+  constructor: () ->
 
-  render: () ->
-    context = _.extend new Template_helpers @global_vars, @base_path
+  render: (content, options) ->
+    context = _.extend new Eco_helpers options.config.global_vars, options.config.base_path
     eco.render @content, context
 
   
