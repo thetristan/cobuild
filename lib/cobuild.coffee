@@ -16,7 +16,6 @@ util      = require './util'
 
 module.exports = class Cobuild
 
-  #CobuildConfig:   require './config'
   @CobuildRenderer: require './renderer'
 
   constructor: (@config) ->
@@ -34,6 +33,10 @@ module.exports = class Cobuild
 
     # TODO: Add config validation
 
+
+
+  # -------------------------------------------
+  # Build methods
 
   # Build one or more files with 
   build: (file, type, opts) ->
@@ -53,25 +56,33 @@ module.exports = class Cobuild
 
     _.defaults opts, @default_opts
 
-
     # Done cleaning up, let's build out some files
+
+    # Single-string mode
     if single_string
       throw new Error 'You must specify a type if passing a string to the build method' unless single_type
       
       # Render our content
       return @render file, type, opts
 
+
     else
+
+      # Single-file as a string mode
       if single_file  
 
-        # Single-file mode
-        content = util.load_file("#{@config.base_path}/#{file}").content
         type = @get_type(file) unless single_type
+        if !@validate_type type
+          throw new Error "No valid renderers added for '#{type}' files"
+
+        content = util.load_file("#{@config.base_path}/#{file}").content
         return @render content, type, opts
-        
+
+
+      # Multiple files or single-file as an object mode
       else
 
-        # Did we get an array?
+        # Multiple file objects passed as an array
         if _.isArray(file) 
 
           # Build each file
@@ -82,14 +93,12 @@ module.exports = class Cobuild
 
           return @
 
-        # Single file as an object, let's do this
+
+        # Single file as an object
         else
                   
           @validate_file file
 
-          # Load up our content
-          content = util.load_files("#{@config.base_path}#{file.source}").content
-          
           # Determine the type
           type = @get_type(file) unless single_type
 
@@ -99,17 +108,30 @@ module.exports = class Cobuild
           if file.options != undefined && _.isObject file.options
             opts = _.extend {}, opts, file.options
 
-          # If we're appending, is this the first time we're writing to this file? 
-          # If so, log it and turn off the append feature for our first write
-          if !opts.replace && _.indexOf(@files_rendered, file.source) == -1 
-            opts.replace = true
-            
-          @files_rendered.push file.source
-  
-          util.save_file "#{@config.base_path}#{file.destination}", @render(content, type, opts), opts.replace
-    
-    return
 
+          # If it's a valid type, let's do our transform
+          if @validate_type type
+
+            # Load up our content
+            content = util.load_files("#{@config.base_path}#{file.source}").content
+
+            # If we're appending, is this the first time we're writing to this file? 
+            # If so, log it and turn off the append feature for our first write
+            if !opts.replace && _.indexOf(@files_rendered, file.source) == -1 
+              opts.replace = true
+              
+            @files_rendered.push file.source
+    
+            util.save_file "#{@config.base_path}#{file.destination}", @render(content, type, opts), opts.replace
+          
+          
+          # Otherwise, copy the file to its destination
+          else
+            util.copy_file "#{@config.base_path}#{file.source}", "#{@config.base_path}#{file.destination}", opts.replace
+
+
+
+    return
 
 
   # Render text via one of our preset renderers
@@ -134,6 +156,13 @@ module.exports = class Cobuild
 
 
 
+  # -------------------------------------------
+  # File detection/handling
+
+  # Validate that we have a renderer for a given type
+  validate_type: (type) ->
+    type != '' and @renderers[type]?
+
 
   # Attempt to detect the file type
   get_type: (file) ->
@@ -146,6 +175,20 @@ module.exports = class Cobuild
 
     ''
 
+
+  # Validate file to make sure it contains all the needed items.
+  validate_file: (file) ->
+    
+    throw new Error 'Source is a required field' unless file.source and _.isString file.source
+    throw new Error 'Destination is a required field' unless file.destination and _.isString file.destination
+    throw new Error 'Type must be specified as a string' if file.type and !_.isString file.type
+    throw new Error 'Options must be specified as an object' if file.options and !_.isObject file.options
+
+    true
+
+
+  # -------------------------------------------
+  # Renderer-handling
 
   # Add a custom renderer
   add_renderer: (type, renderer) ->
@@ -195,14 +238,3 @@ module.exports = class Cobuild
           renderers.push r.renderer
 
     renderers
-
-
-  # Validate file to make sure it contains all the needed items.
-  validate_file: (file) ->
-    
-    throw new Error 'Source is a required field' unless file.source and _.isString file.source
-    throw new Error 'Destination is a required field' unless file.destination and _.isString file.destination
-    throw new Error 'Type must be specified as a string' if file.type and !_.isString file.type
-    throw new Error 'Options must be specified as an object' if file.options and !_.isObject file.options
-
-    true

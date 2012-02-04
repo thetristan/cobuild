@@ -1,4 +1,4 @@
-fs   = require 'fs'
+fs   = require 'fs-extra'
 path = require 'path'
 _    = require 'underscore'
 
@@ -32,6 +32,22 @@ load_files = (files) ->
       content.push load_file file_name
 
   content
+
+
+
+# Copy a file
+copy_file = (source, destination, replace) ->
+
+  check_fix_paths destination
+
+  if path.existsSync path.resolve destination
+    if replace
+      fs.unlinkSync destination
+    else
+      throw new Error 'File already exists'
+
+  fs.copyFileSync source, destination
+  return
 
 
 
@@ -116,6 +132,7 @@ concat_files = (files) ->
   concat_output
 
 
+exports.copy_file     = copy_file
 exports.concat_files  = concat_files
 exports.load_files    = load_files
 exports.load_file     = load_file

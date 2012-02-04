@@ -2,6 +2,7 @@
 fs       = require 'fs'
 _        = require 'underscore'
 colorize = require 'colorize'
+path     = require 'path'
 
 Cobuild  = require '../lib/cobuild'
 
@@ -99,13 +100,13 @@ describe 'Cobuild render system', ->
 
   it 'should return a function back if the loader exists', ->
     renderer = cobuild.load_renderer 'test2_r'
-    r = expect renderer
-    r.toBeTruthy renderer instanceof Function 
+    r = expect renderer instanceof Function
+    r.toBeTruthy()
 
   it 'should return an instance of CobuildRenderer back if the loader exists', ->
     renderer = cobuild.get_renderers('test')[0]
-    r = expect renderer
-    r.toBeTruthy renderer instanceof Cobuild.CobuildRenderer 
+    r = expect renderer instanceof Cobuild.CobuildRenderer
+    r.toBeTruthy()
 
   it 'should return "TEST_foo_TEST" when directly rendering "foo" via "test_r"', ->
     renderer = cobuild.get_renderers('test')[0]
@@ -164,6 +165,14 @@ describe 'Cobuild build system', ->
   it 'should render a single file w/o specifying a type', ->
     r = expect cobuild.build 'spec/samples/test1.html'
     r.toEqual 'TEST_<html>foo</html>_TEST'
+
+  it 'should fail to render a single file w/ an invalid type', ->
+    try
+      cobuild.build 'spec/samples/foo.gif'
+    catch err
+      r = expect err.message
+      r.toEqual "No valid renderers added for 'gif' files"
+
 
   it 'should render an array of files', ->
     result = cobuild.build [{
@@ -297,19 +306,51 @@ describe 'Cobuild build system', ->
     r.toEqual "TEST_<html>foo</html>_TESTTEST_<html>bar</html>_TEST"
 
 
-
   it 'should copy files it has no idea what else to do with', ->
     result = cobuild.build {
       source:      'spec/samples/foo.gif'
       destination: 'spec/output/bar.gif' 
       }
 
+    r = expect path.existsSync "#{__dirname}/output/bar.gif"
+    r.toBeTruthy()
+
+    r = expect fs.statSync("#{__dirname}/output/bar.gif").size
+    r.toEqual fs.statSync("#{__dirname}/samples/foo.gif").size
 
 
-  it 'should replace files that it has already copied', ->
+  it 'should replace files that it has already copied if replace is specified', ->
     result = cobuild.build [{
-      source:      'spec/samples/foo.gif'
+      source:      'spec/samples/foo2.gif'
       destination: 'spec/output/bar.gif'
+      options:
+        replace:   true
       }]
 
+    r = expect path.existsSync "#{__dirname}/output/bar.gif"
+    r.toBeTruthy()
+
+    r = expect fs.statSync("#{__dirname}/output/bar.gif").size
+    r.toEqual fs.statSync("#{__dirname}/samples/foo2.gif").size
+
+
+  it 'shouldn\'t replace files that it has already copied if replace isn\'t specified', ->
+    try 
+      result = cobuild.build [{
+        source:      'spec/samples/foo.gif'
+        destination: 'spec/output/bar2.gif'
+        }
+        {
+        source:      'spec/samples/foo2.gif'
+        destination: 'spec/output/bar2.gif'
+        }]
+    catch err
+      r = expect err.message
+      r.toEqual "File already exists"
+
+    r = expect path.existsSync "#{__dirname}/output/bar2.gif"
+    r.toBeTruthy()
+
+    r = expect fs.statSync("#{__dirname}/output/bar2.gif").size
+    r.toEqual fs.statSync("#{__dirname}/samples/foo.gif").size
 
