@@ -371,7 +371,34 @@ describe 'Built-in eco renderer', ->
     cobuild
       .add_renderer('eco', "eco_r")
 
-  it 'should render an eco template', ->
-    result = cobuild.get_renderers 'eco'
+  it 'should render an eco template with a global variable', ->
+    result = cobuild.build 'A <%= @global.test_var %> tastes great with milk.', 'eco'
     r = expect result
-    console.log result
+    r.toEqual 'A foobar tastes great with milk.'
+
+
+  it 'should render an partial template', ->
+    result = cobuild.build 'However, a <%= @global.test_var_2 %> does not taste great with milk. <%- @partial "spec/samples/test4.eco", { sample_var: "foo" } %>.', 'eco'
+    r = expect result
+    r.toEqual 'However, a raboof does not taste great with milk. <h1>foo</h1>.'
+
+
+
+
+
+describe 'Built-in stylus renderer', ->
+
+  beforeEach ->
+    reset()  
+    cobuild
+      .add_renderer('styl', "stylus_r")
+
+  it 'should render a stylus template', ->
+    stylus_css  = '''
+                  body
+                    h1
+                      width 500px
+                  '''
+    result = cobuild.build stylus_css, 'styl'
+    r = expect result
+    r.toEqual 'A foobar tastes great with milk.'

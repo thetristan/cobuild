@@ -161,11 +161,11 @@ This is where Cobuild really shines as it's easy to create pluggable renderers w
 
     render(`content`,`options`) {  ...  }
 
-It's your responsiblity to a return the string value of any transformations you make to `content`. If you want to make any parts of your renderer user-configurable, you can just include those options when calling `build` and they'll be made available to your renderer via the `options` parameter. In addition, any configuration options set via the cobuild configuration will be included 
+It's your responsiblity to a return the string value of any transformations you make to `content`. If you want to make any parts of your renderer user-configurable, you can just include those options when calling `build` and they'll be made available to your renderer via the `options` parameter. In addition, any configuration options set via the cobuild configuration will be included and available under `options.config` If a file is passed to the build method (via string or object), an object describing that file (that includes the source, destination, etc.) will be available at `options.file`
 
-By including your renderer in your `renderer_path` (specified in the configuration file you passed to Cobuild during initialization), Cobuild will use your renderer when you pass it to the `add_renderer` method. The renderer itself will be initialized when it's first used, and it's instance will persist until it's been removed so you can do things like track statistics
+By including your renderer in your `renderer_path` (specified in the configuration file you passed to Cobuild during initialization), Cobuild will use your renderer when you pass it to the `add_renderer` method. The renderer itself will be initialized when it's first used, and it's instance will persist until it's been removed; this lets you do things like track statistics if you want.
 
-To keep naming consistent and make renderers easily identifiable, the official renderers will always have an `_r` suffix at the end of them to. I recommend you do the same with your renderers.
+To keep naming consistent and make renderers easily identifiable, the official renderers will always have an `_r` suffix at the end of them. I recommend you do the same with your renderers.
 
 ### Example Renderer
 

@@ -2,5 +2,5 @@ module.exports = class Test2_r
 
   constructor: ()->
 
-  render: (content, options) ->
+  render: (content, type, options) ->
     content.toLowerCase()

@@ -13,12 +13,12 @@ fs     = require 'fs'
 
 class Eco_helpers
 
-  constructor: (@global_vars, @base_path) ->
+  constructor: (@global, @base_path) ->
 
-  partial: (@template, context) =>
-    context = _.extend @, @global_vars, context
-    template = fs.readFileSync "#{@base_path}src/#{@template}"), 'utf-8'
-    eco.render template, context
+  partial: (template, context) =>
+    context = _.extend @, context
+    content = fs.readFileSync "#{@base_path}#{template}", 'utf-8'
+    eco.render content, context
    
     
     
@@ -33,11 +33,12 @@ class Eco_helpers
 
 module.exports = class Eco_r
 
-  constructor: () ->
+  constructor: ->
 
-  render: (content, options) ->
-    context = _.extend new Eco_helpers options.config.global_vars, options.config.base_path
-    eco.render @content, context
+  render: (content, type, options) ->
+    globals = options.config.eco.global_vars || {} 
+    context = new Eco_helpers(globals, options.config.base_path)
+    eco.render content, context
 
   
 

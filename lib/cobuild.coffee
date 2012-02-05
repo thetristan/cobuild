@@ -24,18 +24,29 @@ module.exports = class Cobuild
     @renderers        = {}
     @files_rendered   = []
 
+    @clean_up_config()
+
     @default_opts =
       preprocess:   null
       postprocess: null
       replace:     false
       config:      @config
 
-    # TODO: Add config validation
 
 
 
   # -------------------------------------------
-  # Build methods
+  # Config validation and cleanup
+
+  clean_up_config: ->
+
+    @config.base_path = path.resolve(@config.base_path) + '/'
+
+
+
+
+  # -------------------------------------------
+  # Build+render method
 
   # Build one or more files with 
   build: (file, type, opts) ->
@@ -44,13 +55,13 @@ module.exports = class Cobuild
     single_type = _.isString type
 
     # Load a single file or an array of files?
-    single_file = _.isString(file) and @get_type(file) != ""
+    single_file = !_.isArray(file) and _.isString(file) and @get_type(file) != ""
 
     # Maybe we're just loading a string to transform?
-    single_string = _.isString(file) and @get_type(file) == ""
+    single_string = !_.isArray(file) and _.isString(file) and @get_type(file) == ""
 
     # We can use the second param as our options if we didn't specify a type string
-    opts or= type unless type instanceof String
+    opts or= type unless _.isString type
     opts or= {}
 
     _.defaults opts, @default_opts
@@ -62,7 +73,6 @@ module.exports = class Cobuild
       
       throw new Error 'You must specify a type if passing a string to the build method' unless single_type    
       throw new Error "No valid renderers added for '#{type}'" unless @validate_type type
-
 
       # Render our content
       return @render file, type, opts
@@ -76,6 +86,12 @@ module.exports = class Cobuild
         type = @get_type(file) unless single_type
         if !@validate_type type
           throw new Error "No valid renderers added for '#{type}' files"
+
+        opts.file = 
+          source: file
+          destination: null
+          type: type 
+          options: opts
 
         content = util.load_file("#{@config.base_path}/#{file}").content
         return @render content, type, opts
@@ -110,6 +126,7 @@ module.exports = class Cobuild
           if file.options != undefined && _.isObject file.options
             opts = _.extend {}, opts, file.options
 
+          opts.file = file
 
           # If it's a valid type, let's do our transform
           if @validate_type type
@@ -123,7 +140,7 @@ module.exports = class Cobuild
               opts.replace = true
               
             @files_rendered.push file.source
-    
+
             util.save_file "#{@config.base_path}#{file.destination}", @render(content, type, opts), opts.replace
           
           
@@ -147,7 +164,7 @@ module.exports = class Cobuild
     
     # Process content
     content = _.reduce renderers, (current_content, current_renderer)->
-      current_renderer?.render? current_content, opts
+      current_renderer?.render? current_content, type, opts
     , content
 
     # Do we need to postprocess content?
@@ -155,6 +172,7 @@ module.exports = class Cobuild
         content = opts.postprocess content, type, opts
     
     content
+
 
 
 
@@ -168,14 +186,18 @@ module.exports = class Cobuild
 
   # Attempt to detect the file type
   get_type: (file) ->
-    
-    if _.isString file
-      return path.extname(file).replace('.','')
 
     if _.isObject file
-      return path.extname(file.source).replace('.','')
+      file = file.source
 
-    ''
+    # Check for illegal characters
+    illegals = ['?','<','>','\\',':','*','|','”']
+    has_illegals = _.any file.split(''), (p)->
+      _.include illegals, p
+
+    if has_illegals then return ''
+
+    return path.extname(file).replace('.','')
 
 
   # Validate file to make sure it contains all the needed items.
@@ -187,6 +209,8 @@ module.exports = class Cobuild
     throw new Error 'Options must be specified as an object' if file.options and !_.isObject file.options
 
     true
+
+
 
 
   # -------------------------------------------
@@ -222,6 +246,7 @@ module.exports = class Cobuild
         result = require current_path
       catch err
         return null
+
 
     result
 

@@ -2,5 +2,5 @@ module.exports = class Test_r
 
   constructor: ()->
 
-  render: (content, options) ->
+  render: (content, type, options) ->
     'TEST_' + content + '_TEST'
