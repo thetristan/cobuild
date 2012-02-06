@@ -99,18 +99,23 @@ copy_file = (source, destination, replace = false, callback) ->
           if exists
             if replace
               fs.unlink destination, next
+              return
             else
+              console.error 'file exists', callback
               callback "File #{destination} already exists", false
+              return
+          next()
           return
     
       (next)->
         fs.copyFile source, destination, next
+        return
 
     ],
     (err)->
       result = true
       if err then result = false
-      callback(err, result)
+      callback err, result
       return
 
   return

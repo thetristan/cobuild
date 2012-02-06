@@ -35,8 +35,6 @@ reset = ->
 
 # -------------------------------------------
 
-###  
-
 # START TESTS
 describe 'Cobuild file detection', ->
 
@@ -134,8 +132,6 @@ describe 'Cobuild render system', ->
 # -------------------------------------------
 
 
-###
-
 describe 'Cobuild build system', ->  
 
 
@@ -215,7 +211,6 @@ describe 'Cobuild build system', ->
     runs ->
       cobuild.build { file: 'spec/samples/test1.html' }, 
         (err,data)=>
-          console.error arguments
           complete = true
           @data = data
           return
@@ -473,57 +468,109 @@ describe 'Cobuild build system', ->
       r = expect fs.readFileSync("#{__dirname}/output/test10.html", 'utf-8')
       r.toEqual "TEST_<html>foo</html>_TESTTEST_<html>bar</html>_TEST"
 
-  ###
 
   it 'should copy files it has no idea what else to do with', ->
-    result = cobuild.build {
-      source:      'spec/samples/foo.gif'
-      destination: 'spec/output/bar.gif' 
-      }
 
-    r = expect path.existsSync "#{__dirname}/output/bar.gif"
-    r.toBeTruthy()
+    complete = false
 
-    r = expect fs.statSync("#{__dirname}/output/bar.gif").size
-    r.toEqual fs.statSync("#{__dirname}/samples/foo.gif").size
+    runs ->
+      files = [{
+        source:      'spec/samples/foo.gif'
+        destination: 'spec/output/bar.gif' 
+        }]
+
+      cobuild.build { files: files }, ->
+        complete = true
+        return
+
+      return
+
+    waitsFor ->
+        complete
+      , 'callback never fired', 500
+
+    runs ->
+
+      r = expect path.existsSync "#{__dirname}/output/bar.gif"
+      r.toBeTruthy()
+
+      r = expect fs.statSync("#{__dirname}/output/bar.gif").size
+      r.toEqual fs.statSync("#{__dirname}/samples/foo.gif").size
+
+      return
+
 
 
   it 'should replace files that it has already copied if replace is specified', ->
-    result = cobuild.build [{
-      source:      'spec/samples/foo2.gif'
-      destination: 'spec/output/bar.gif'
-      options:
-        replace:   true
+    
+    complete = false
+
+    runs ->
+      files = [{
+        source:      'spec/samples/foo2.gif'
+        destination: 'spec/output/bar.gif'
+        options:
+          replace:   true
       }]
 
-    r = expect path.existsSync "#{__dirname}/output/bar.gif"
-    r.toBeTruthy()
+      cobuild.build { files: files }, ->
+        complete = true
+        return
 
-    r = expect fs.statSync("#{__dirname}/output/bar.gif").size
-    r.toEqual fs.statSync("#{__dirname}/samples/foo2.gif").size
+      return
+
+    waitsFor ->
+        complete
+      , 'callback never fired', 500
+
+
+    runs ->
+
+      r = expect path.existsSync "#{__dirname}/output/bar.gif"
+      r.toBeTruthy()
+
+      r = expect fs.statSync("#{__dirname}/output/bar.gif").size
+      r.toEqual fs.statSync("#{__dirname}/samples/foo2.gif").size
+
+      return
+
+
 
 
   it 'shouldn\'t replace files that it has already copied if replace isn\'t specified', ->
-    try 
-      result = cobuild.build [{
-        source:      'spec/samples/foo.gif'
-        destination: 'spec/output/bar2.gif'
+    
+    complete = false
+
+    runs ->
+      files = [{
+          source:      'spec/samples/foo.gif'
+          destination: 'spec/output/bar2.gif'
         }
         {
-        source:      'spec/samples/foo2.gif'
-        destination: 'spec/output/bar2.gif'
+          source:      'spec/samples/foo2.gif'
+          destination: 'spec/output/bar2.gif'
         }]
-    catch err
-      r = expect err.message
-      r.toEqual "File already exists"
 
-    r = expect path.existsSync "#{__dirname}/output/bar2.gif"
-    r.toBeTruthy()
+      cobuild.build { files: files }, 
+        (err)->
+          complete = true
+          console.error arguments
+          @err = err
+          return
+      return
 
-    r = expect fs.statSync("#{__dirname}/output/bar2.gif").size
-    r.toEqual fs.statSync("#{__dirname}/samples/foo.gif").size
+    waitsFor ->
+        complete
+      , 'callback never fired', 500
 
+    runs ->
 
+      r = expect path.existsSync "#{__dirname}/output/bar2.gif"
+      r.toBeTruthy()
+
+      r = expect fs.statSync("#{__dirname}/output/bar2.gif").size
+      r.toEqual fs.statSync("#{__dirname}/samples/foo.gif").size
+      return
 
 
 describe 'Built-in eco renderer', ->
@@ -534,18 +581,43 @@ describe 'Built-in eco renderer', ->
       .add_renderer('eco', "eco_r")
 
   it 'should render an eco template with a global variable', ->
-    result = cobuild.build 'A <%= @global.test_var %> tastes great with milk.', 'eco'
-    r = expect result
-    r.toEqual 'A foobar tastes great with milk.'
+    complete = false
+    
+    runs ->
+      cobuild.build { string: 'A <%= @global.test_var %> tastes great with milk.', type: 'eco' }, 
+        (err,data)=>
+          complete = true
+          @data = data
+          return
+      return
+
+    waitsFor ->
+        complete
+      , 'callback never fired', 500
+
+    runs ->
+      r = expect @data
+      r.toEqual 'A foobar tastes great with milk.'
 
 
   it 'should render an partial template', ->
-    result = cobuild.build 'However, a <%= @global.test_var_2 %> does not taste great with milk. <%- @partial "spec/samples/test4.eco", { sample_var: "foo" } %>.', 'eco'
-    r = expect result
-    r.toEqual 'However, a raboof does not taste great with milk. <h1>foo</h1>.'
+    complete = false
+    
+    runs ->
+      cobuild.build { string: 'However, a <%= @global.test_var_2 %> does not taste great with milk. <%- @partial "spec/samples/test4.eco", { sample_var: "foo" } %>.', type: 'eco' }, 
+        (err,data)=>
+          complete = true
+          @data = data
+          return
+      return
 
+    waitsFor ->
+        complete
+      , 'callback never fired', 500
 
-
+    runs ->
+      r = expect @data
+      r.toEqual 'However, a raboof does not taste great with milk. <h1>foo</h1>.'
 
 
 describe 'Built-in stylus renderer', ->
@@ -556,12 +628,25 @@ describe 'Built-in stylus renderer', ->
       .add_renderer('styl', "stylus_r")
 
   it 'should render a stylus template', ->
-    stylus_css  = '''
-                  body
-                    h1
-                      width 500px
-                  '''
-    result = cobuild.build stylus_css, 'styl'
-    r = expect result
-    r.toEqual 'A foobar tastes great with milk.'
+    complete = false
+
+    stylus_css    = '''
+                    body
+                      h1
+                        width 500px
+                    '''
+    stylus_result = "body h1 {\n  width: 500px;\n}\n"
+                    
+    result = cobuild.build { string: stylus_css, type: 'styl' }, (err,data)=>
+      complete = true
+      @data = data
+      return
+
+    waitsFor ->
+        complete
+      , 'callback never fired', 500
+
+    runs ->
+      r = expect @data
+      r.toEqual stylus_result
 

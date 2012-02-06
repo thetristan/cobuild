@@ -17,11 +17,7 @@ module.exports = class Stylus_r
 
   constructor: ->
 
-  render: (content, type, options) ->
+  render: (content, type, options, callback) ->
     styl_opts = options.stylus || {}
     styl_opts.filename = options.file?.source || ''
-
-    console.log styl_opts
-
-    stylus.render content, styl_opts, (err,css)->
-      console.log "FOOIZZLE: #{css}"
+    stylus.render content, styl_opts, callback

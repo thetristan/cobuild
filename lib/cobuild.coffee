@@ -86,12 +86,12 @@ module.exports = class Cobuild
     params.options.file = 
       source: params.file
       destination: null
-      type: params.type 
+      type: type 
       options: params.options
 
     util.load_file "#{@config.base_path}/#{params.file}", 
       (err, file)=>
-        @render file.content, params.type, params.options, callback
+        @render file.content, type, params.options, callback
         return
 
     return @
@@ -148,6 +148,7 @@ module.exports = class Cobuild
     # Otherwise, copy the file to its destination
     else
       util.copy_file source, destination, params.options.replace, callback
+
     return @
 
 
@@ -162,8 +163,6 @@ module.exports = class Cobuild
       (f, next)=>
         
         @build { file: f, type: params.type, options: params.options }, ->
-          
-          
           next()
         return
       (err)->
