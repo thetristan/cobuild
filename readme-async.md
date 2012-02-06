@@ -1,5 +1,8 @@
 # Cobuild for NodeJS
 
+TODO: Update this. It's entirely different and async now. D'oh.
+
+
 Cobuild isn't a build system, but it is a system that helps you build build systems faster. The module is fully asynchronous and allows you to pass one or more files through it to transform text-based content by sending it through one or more renderers based on filetype. 
 
 You can quickly process your CSS, compress your JS, and even run your HTML through a template parser through a single interface.
