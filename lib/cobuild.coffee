@@ -49,7 +49,7 @@ module.exports = class Cobuild
   # Build+render method
 
   # Build one or more files with 
-  build: (file, type, opts) ->
+  build: (file, type, opts = {}, callback) ->
 
     # Use a preset type or attempt to detect it?
     single_type = _.isString type
@@ -62,7 +62,6 @@ module.exports = class Cobuild
 
     # We can use the second param as our options if we didn't specify a type string
     opts or= type unless _.isString type
-    opts or= {}
 
     _.defaults opts, @default_opts
 
@@ -75,8 +74,6 @@ module.exports = class Cobuild
       throw new Error "No valid renderers added for '#{type}'" unless @validate_type type
 
       # Render our content
-      return @render file, type, opts
-
 
     else
 
@@ -148,13 +145,11 @@ module.exports = class Cobuild
           else
             util.copy_file "#{@config.base_path}#{file.source}", "#{@config.base_path}#{file.destination}", opts.replace
 
-
-
-    return
+    callback(err,result)
 
 
   # Render text via one of our preset renderers
-  render: (content, type, opts) -> 
+  render: (content, type, opts, callback) -> 
     
     renderers = @get_renderers type
 
