@@ -52,16 +52,23 @@ module.exports = class Cobuild
   build: (file, type, opts = {}, callback) ->
 
     # Use a preset type or attempt to detect it?
-    single_type = _.isString type
+    single_type = _.isString type & type != ''
 
-    # Load a single file or an array of files?
-    single_file = !_.isArray(file) and _.isString(file) and @get_type(file) != ""
-
-    # Maybe we're just loading a string to transform?
-    single_string = !_.isArray(file) and _.isString(file) and @get_type(file) == ""
+    # Load a single file or an array of files? Or just loading a string to transform?
+    single_file = _.isString(file) and (opts.file? or @get_type(file) != "")
+    single_string = _.isString(file) and (!opts.file? or @get_type(file) == "")
 
     # We can use the second param as our options if we didn't specify a type string
-    opts or= type unless _.isString type
+    if _.isObject(type) and _.isFunction(opts) and !callback?
+      callback  = opts
+      opts      = type
+      type      = ''
+
+    # We can use the second param as our callback if we didn't specify a type or any options
+    if _.isFunction(type) and !opts? and !callback?
+      callback  = type
+      opts      = {}
+      type      = ''
 
     _.defaults opts, @default_opts
 
@@ -70,10 +77,12 @@ module.exports = class Cobuild
     # Single-string mode
     if single_string
       
-      throw new Error 'You must specify a type if passing a string to the build method' unless single_type    
-      throw new Error "No valid renderers added for '#{type}'" unless @validate_type type
+      callback('You must specify a type if passing a string to the build method', null) unless single_type    
+      callback("No valid renderers added for '#{type}'", null) unless @validate_type type
 
       # Render our content
+      @render file, type, opts, callback
+      return @
 
     else
 
@@ -82,7 +91,7 @@ module.exports = class Cobuild
 
         type = @get_type(file) unless single_type
         if !@validate_type type
-          throw new Error "No valid renderers added for '#{type}' files"
+          callback "No valid renderers added for '#{type}' files", null
 
         opts.file = 
           source: file
@@ -90,8 +99,12 @@ module.exports = class Cobuild
           type: type 
           options: opts
 
-        content = util.load_file("#{@config.base_path}/#{file}").content
-        return @render content, type, opts
+        util.load_file("#{@config.base_path}/#{file}"), 
+          (err, file)->
+            @render file.content, type, opts, callback
+            return @
+
+        return
 
 
       # Multiple files or single-file as an object mode
@@ -101,10 +114,12 @@ module.exports = class Cobuild
         if _.isArray(file) 
 
           # Build each file
-          _.each file, (f)=>
-
-            @build f, type, opts
-            return
+          async.forEachSeries file, 
+            (f, next)=>
+              @build f, type, opts, next
+              return
+            (err)->
+              callback(err,results)
 
           return @
 
@@ -124,28 +139,36 @@ module.exports = class Cobuild
             opts = _.extend {}, opts, file.options
 
           opts.file = file
+          source      = "#{@config.base_path}#{file.source}"
+          destination = "#{@config.base_path}#{file.destination}"
 
           # If it's a valid type, let's do our transform
           if @validate_type type
 
             # Load up our content
-            content = util.load_files("#{@config.base_path}#{file.source}").content
+            util.load_files source, 
+              (err, content)->
 
-            # If we're appending, is this the first time we're writing to this file? 
-            # If so, log it and turn off the append feature for our first write
-            if !opts.replace && _.indexOf(@files_rendered, file.source) == -1 
-              opts.replace = true
-              
-            @files_rendered.push file.source
+                # If we're appending, is this the first time we're writing to this file? 
+                # If so, log it and turn off the append feature for our first write
+                if !opts.replace && _.indexOf(@files_rendered, file.source) == -1 
+                  opts.replace = true
+                  
+                @files_rendered.push file.source
 
-            util.save_file "#{@config.base_path}#{file.destination}", @render(content, type, opts), opts.replace
+                @render content, type, opts, 
+                  (err, content)->
+                    util.save_file destination, content, opts.replace, callback
+                    return
+
+                return
           
           
           # Otherwise, copy the file to its destination
           else
-            util.copy_file "#{@config.base_path}#{file.source}", "#{@config.base_path}#{file.destination}", opts.replace
+            util.copy_file source, destination, opts.replace, callback
 
-    callback(err,result)
+
 
 
   # Render text via one of our preset renderers
@@ -153,21 +176,31 @@ module.exports = class Cobuild
     
     renderers = @get_renderers type
 
-    # Do we need to preprocess content?
-    if opts.preprocess instanceof Function
-        content = opts.preprocess content, type, opts
-    
-    # Process content
-    content = _.reduce renderers, (current_content, current_renderer)->
-      current_renderer?.render? current_content, type, opts
-    , content
+    async.waterfall [
 
-    # Do we need to postprocess content?
-    if opts.postprocess instanceof Function
-        content = opts.postprocess content, type, opts
-    
-    content
+      # Preprocesing?
+      (next)->
+        if _.isFunction opts.preprocess
+          opts.preprocess content, type, opts, next
+        else
+          next null, content
 
+      # Main rendering loop
+      (content, next)->
+        async.reduce renderers, content, 
+          (curr_content, curr_renderer, cb)->
+            current_renderer?.render? curr_content, type, opts, cb
+          (err, result)->
+            next err, result
+
+      # Postprocessing?
+      (content, next)->
+        if _.isFunction opts.postprocess
+          content = opts.postprocess content, type, opts, next
+
+    ], callback
+
+    return
 
 
 
@@ -252,7 +285,7 @@ module.exports = class Cobuild
 
     _.each @renderers[type], (r, i)=>
       # If we've already initialized a renderer, skip this
-      if r.renderer?.render instanceof Function
+      if _.isFunction r.renderer?.render
         renderers.push r.renderer
       else
         renderer = @load_renderer r.name
