@@ -99,7 +99,7 @@ module.exports = class Cobuild
           type: type 
           options: opts
 
-        util.load_file("#{@config.base_path}/#{file}"), 
+        util.load_file "#{@config.base_path}/#{file}", 
           (err, file)->
             @render file.content, type, opts, callback
             return @
