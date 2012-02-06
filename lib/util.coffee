@@ -170,7 +170,7 @@ save_file = (file, content, replace = false, callback) ->
       console.error "SAVING FILE", arguments
       fs.open file, file_mode, (err, fd)->
         console.error "FILE OPENED", arguments
-        fs.write fd, content, 0, 'utf-8', (err, written)->
+        fs.write fd, content, (err, written)->
           console.error "CONTENT WRITTEN", arguments
           fs.close fd, (err)->
             console.error "FILE CLOSED", arguments
