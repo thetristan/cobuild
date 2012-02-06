@@ -1,5 +1,6 @@
 _         = require 'underscore'
 path      = require 'path'
+async     = require 'async'
 util      = require './util'
 
 
@@ -147,7 +148,7 @@ module.exports = class Cobuild
 
             # Load up our content
             util.load_files source, 
-              (err, content)->
+              (err, content)=>
 
                 # If we're appending, is this the first time we're writing to this file? 
                 # If so, log it and turn off the append feature for our first write
