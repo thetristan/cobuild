@@ -28,6 +28,8 @@ prep_content = (content, callback)->
 # Load file contents from an array
 load_files = (files, callback) ->
 
+  console.error "LF", arguments
+
   # Load file contents from a single file
   if typeof files == 'string'
     content = load_file files, callback
@@ -99,7 +101,8 @@ copy_file = (source, destination, replace = false, callback) ->
 
     ],
     (err)->
-      result = true unless err
+      result = true
+      if err then result = false
       callback(err, result)
       return
 
@@ -114,14 +117,12 @@ copy_file = (source, destination, replace = false, callback) ->
 # Save text-based file
 save_files = (files, content, replace = false, callback) ->
   
-  result = false
-
   # Save a single file 
-  if typeof files == 'string'
+  if _.isString files
     save_file files, content, replace, callback
 
   # Save multiple files
-  if files instanceof Array
+  if _.isArray files
 
     # Save 'em all
     async.forEachSeries files, 
@@ -129,7 +130,8 @@ save_files = (files, content, replace = false, callback) ->
         save_file file.file_name, file.content, replace, next
         return
       (err)->
-        result = true unless err
+        result = true
+        if err then result = false
         callback(err, result)
         return
 
@@ -140,33 +142,38 @@ save_files = (files, content, replace = false, callback) ->
 # Save a single file
 save_file = (file, content, replace = false, callback) ->
 
-  # Initial result + file mode  
-  result = false
+  console.error "SF", arguments
   file_mode = 'w'
 
   async.series [
 
     # Check the path first and create any needed directories
     (next)->
+      console.error "SFCP", arguments
       check_fix_paths file, next
 
     # Deal with any existing files that need to be replaced
     (next)->
+      console.error "SFEX", arguments
       path.exists file, (exists)->
         if exists
           if replace
             fs.unlink file, next
           else
             file_mode = 'a'
-            next()
+        next()
         return
       return
 
     # Open the file and write the contents back to it
     (next)->
+      console.error "SAVING FILE", arguments
       fs.open file, file_mode, (err, fd)->
-        fs.write fd, content, (err, written)->
+        console.error "FILE OPENED", arguments
+        fs.write fd, content, 0, 'utf-8', (err, written)->
+          console.error "CONTENT WRITTEN", arguments
           fs.close fd, (err)->
+            console.error "FILE CLOSED", arguments
             next()
             return
           return
@@ -175,8 +182,10 @@ save_file = (file, content, replace = false, callback) ->
 
   ],
   (err)->
-    result = true unless err
-    callback(err, result)
+    result = true
+    if err then result = false
+    console.error "SAVE DONE", arguments
+    callback err, result
     return
   
   return

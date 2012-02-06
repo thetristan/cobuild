@@ -33,7 +33,9 @@ reset = ->
   cobuild = new Cobuild "#{__dirname}/config.coffee"
 
 
+# -------------------------------------------
 
+###  
 
 # START TESTS
 describe 'Cobuild file detection', ->
@@ -50,6 +52,7 @@ describe 'Cobuild file detection', ->
     r.toEqual ''
 
 
+# -------------------------------------------
 
 
 describe 'Cobuild render system', ->
@@ -114,8 +117,8 @@ describe 'Cobuild render system', ->
 
   it 'should return "TEST_foo_TEST" when directly rendering "foo" via "test_r"', ->
     renderer = cobuild.get_renderers('test')[0]
-    r = expect renderer.render 'foo'
-    r.toEqual 'TEST_foo_TEST'
+    renderer.render 'foo', '', {}, (err, data)->
+      expect(data).toEqual 'TEST_foo_TEST'
 
   it 'should remove all renderers on a type when calling remove_renderer but not specifying a path', ->
     result = cobuild.remove_renderer 'test'
@@ -128,9 +131,13 @@ describe 'Cobuild render system', ->
     r.toEqual cobuild
 
 
+# -------------------------------------------
 
+
+###
 
 describe 'Cobuild build system', ->  
+
 
   beforeEach ->
     reset()  
@@ -138,180 +145,321 @@ describe 'Cobuild build system', ->
       .add_renderer('test', "test_r")
       .add_renderer('html', "test_r")
       .add_renderer('foo', "test3_r")
+    return
+
+  ###
 
   it 'should render a string with "render" with multiple renderers', ->
-    r = expect cobuild
+    cobuild
       .add_renderer('test', "test2_r")
-      .render 'foo', 'test', {}
-    r.toEqual 'test_foo_test'
+      .render 'foo', 'test', {},
+        (err, data)->
+          expect(data).toEqual 'test_foo_test'
 
   it 'should render a string and use a preprocess if specified', ->
-    reset()
-    result = cobuild
-      .add_renderer('test','test_r')
-      .render 'foo', 'test',
-        preprocess: (c,t,o) ->
-          c.toUpperCase()
-    r = expect result
-    r.toEqual 'TEST_FOO_TEST'
+    
+    runs ()->
+      reset()
+      opts = 
+        preprocess: (c,t,o, next) ->
+          next null, c.toUpperCase()
+          return 
+
+      cobuild
+        .add_renderer('test','test_r')
+        .render 'foo', 'test', opts,
+          (err, data)=>
+            @result = data
+            return
+      return
+    
+    waits 100
+
+    runs ()->
+      expect(@result).toEqual 'TEST_FOO_TEST'
+      return
+
+    return
+
 
   it 'should render a string and use a postprocess if specified', ->
-    reset()
-    result = cobuild
-      .add_renderer('test','test_r')
-      .render 'foo', 'test',
-        postprocess: (c,t,o) ->
-          c.charAt(5)
-    r = expect result
-    r.toEqual 'f'
+    
+    runs ()->
+      reset()
+      opts =
+        postprocess: (c,t,o, next) ->
+          next null, c.charAt(5)
+          return
+
+      cobuild
+        .add_renderer('test','test_r')
+        .render 'foo', 'test', opts,
+          (err, data)=>
+            expect(data).toEqual 'f'
+            return
+
+      return
+    return
+
 
   it 'should render a single file', ->
-    r = expect cobuild.build 'spec/samples/test1.html', 'test'
-    r.toEqual 'TEST_<html>foo</html>_TEST'
+    cobuild.build { file: 'spec/samples/test1.html', type: 'test' },
+      (err, data)->
+        expect(data).toEqual 'TEST_<html>foo</html>_TEST'
+        return
+    return
+
 
   it 'should render a single file w/o specifying a type', ->
-    r = expect cobuild.build 'spec/samples/test1.html'
-    r.toEqual 'TEST_<html>foo</html>_TEST'
+
+    cobuild.build { file: 'spec/samples/test1.html' }, 
+      (err,data)->
+        expect(data).toEqual 'TEST_<html>foo</html>_TEST'
+        return
+
+    return
 
   it 'should fail to render a single file w/ an invalid type', ->
-    try
-      cobuild.build 'spec/samples/foo.gif'
-    catch err
-      r = expect err.message
-      r.toEqual "No valid renderers added for 'gif' files"
+    
+    runs ->
+      cobuild.build { file: 'spec/samples/foo.gif' },
+        (err, data)=>
+          #console.log "BUILD RESULT", arguments
+          @err = err
+          return
+      return
 
+    waits 1000
+
+    runs ->
+      expect(@err).toEqual "No valid renderers added for 'gif' files"
+      return
+
+    return
+
+  ### 
 
   it 'should render an array of files', ->
-    result = cobuild.build [{
+    
+    complete = false
+    
+    runs ()->
+      files = [{
         source:      'spec/samples/test1.html'
         destination: 'spec/output/test1.html'
       }
       {
         source:      'spec/samples/test2.html'
         destination: 'spec/output/test2.html'
-      }], 'test'
+      }]
 
-    r = expect result
-    r.toEqual cobuild
 
-    r = expect fs.readdirSync("#{__dirname}/output/").length
-    r.toEqual 2
+      result = cobuild.build { files: files, type: 'test' },
+        (err, data)->
+          complete = true
+          return
 
-    r = expect fs.readFileSync("#{__dirname}/output/test1.html", 'utf-8')
-    r.toEqual "TEST_<html>foo</html>_TEST"
+      expect(result).toEqual cobuild
 
-    r = expect fs.readFileSync("#{__dirname}/output/test2.html", 'utf-8')
-    r.toEqual "TEST_<html>bar</html>_TEST"
+      return
+
+    waitsFor ->
+        complete
+      , 'Callback never called', 500
+
+    runs ()->
+      
+      r = expect fs.readdirSync("#{__dirname}/output/").length
+      r.toEqual 2
+
+      r = expect fs.readFileSync("#{__dirname}/output/test1.html", 'utf-8')
+      r.toEqual "TEST_<html>foo</html>_TEST"
+
+      r = expect fs.readFileSync("#{__dirname}/output/test2.html", 'utf-8')
+      r.toEqual "TEST_<html>bar</html>_TEST"
+
+      return
+
+    return
+
 
 
   it 'should render an array of files w/o specifying a type', ->
-    result = cobuild.build [{
-        source:      'spec/samples/test1.html'
-        destination: 'spec/output/test3.html'
-      }
-      {
-        source:      'spec/samples/test2.html'
-        destination: 'spec/output/test4.html'
-      }]
 
-    r = expect result
-    r.toEqual cobuild
+    complete = false
 
-    r = expect fs.readdirSync("#{__dirname}/output/").length
-    r.toEqual 4
+    runs ->
+      files = [{
+          source:      'spec/samples/test1.html'
+          destination: 'spec/output/test3.html'
+        }
+        {
+          source:      'spec/samples/test2.html'
+          destination: 'spec/output/test4.html'
+        }]
 
-    r = expect fs.readFileSync("#{__dirname}/output/test3.html", 'utf-8')
-    r.toEqual "TEST_<html>foo</html>_TEST"
+      result = cobuild.build { files: files }, ->
+        complete = true
+        return
 
-    r = expect fs.readFileSync("#{__dirname}/output/test4.html", 'utf-8')
-    r.toEqual "TEST_<html>bar</html>_TEST"
+      expect(result).toEqual cobuild
+
+      return
+
+
+    waitsFor ->
+        complete
+      , 'Callback never called', 500
+
+    runs ->
+      r = expect fs.readdirSync("#{__dirname}/output/").length
+      r.toEqual 4
+
+      r = expect fs.readFileSync("#{__dirname}/output/test3.html", 'utf-8')
+      r.toEqual "TEST_<html>foo</html>_TEST"
+
+      r = expect fs.readFileSync("#{__dirname}/output/test4.html", 'utf-8')
+      r.toEqual "TEST_<html>bar</html>_TEST"
+
+      return
+
+
 
   it 'should render an array of files w/ a file-specific type override', ->
-    result = cobuild.build [{
-        source:      'spec/samples/test1.html'
-        destination: 'spec/output/test5.html'
-      }
-      {
-        source:      'spec/samples/test2.html'
-        destination: 'spec/output/test6.html'
-        type: 'foo'
-      }]
 
-    r = expect result
-    r.toEqual cobuild
+    complete = false 
 
-    r = expect fs.readdirSync("#{__dirname}/output/").length
-    r.toEqual 6
+    runs ->
+      files = [{
+          source:      'spec/samples/test1.html'
+          destination: 'spec/output/test5.html'
+        }
+        {
+          source:      'spec/samples/test2.html'
+          destination: 'spec/output/test6.html'
+          type: 'foo'
+        }]
 
-    r = expect fs.readFileSync("#{__dirname}/output/test5.html", 'utf-8')
-    r.toEqual "TEST_<html>foo</html>_TEST"
+      result = cobuild.build { files: files }, ->
+        complete = true
+        return
 
-    r = expect fs.readFileSync("#{__dirname}/output/test6.html", 'utf-8')
-    r.toEqual "FOO"
+      expect(result).toEqual cobuild
+
+      return
+
+    waitsFor ->
+        complete
+      , 'Callback never called', 500
+
+    runs ->
+      r = expect fs.readdirSync("#{__dirname}/output/").length
+      r.toEqual 6
+
+      r = expect fs.readFileSync("#{__dirname}/output/test5.html", 'utf-8')
+      r.toEqual "TEST_<html>foo</html>_TEST"
+
+      r = expect fs.readFileSync("#{__dirname}/output/test6.html", 'utf-8')
+      r.toEqual "FOO"
+
+      return
 
 
   it 'should render an array of files w/ a file-specific options override', ->
-    result = cobuild.build [{
+    
+    complete = false
+
+    runs ->
+
+      files = [{
         source:      'spec/samples/test1.html'
         destination: 'spec/output/test7.html'
         options:
-          preprocess: (c,t,o) ->
-            c.toUpperCase()
-          postprocess: (c,t,o) ->
-            c.charAt(11)
+          preprocess: (c,t,o, next) ->
+            next null, c.toUpperCase()
+          postprocess: (c,t,o, next) ->
+            next null, c.charAt(11)
       }
       {
         source:      'spec/samples/test2.html'
         destination: 'spec/output/test8.html'
       }]
 
-    r = expect result
-    r.toEqual cobuild
+      result = cobuild.build { files: files }, ->
+        complete = true
+        return
 
-    r = expect fs.readdirSync("#{__dirname}/output/").length
-    r.toEqual 8
+      expect(result).toEqual cobuild
 
-    r = expect fs.readFileSync("#{__dirname}/output/test7.html", 'utf-8')
-    r.toEqual "F"
+      return
 
-    r = expect fs.readFileSync("#{__dirname}/output/test8.html", 'utf-8')
-    r.toEqual "TEST_<html>bar</html>_TEST"
+    waitsFor ->
+        complete
+      , 'Callback never called', 500
+
+    runs ->
+
+      r = expect fs.readdirSync("#{__dirname}/output/").length
+      r.toEqual 8
+
+      r = expect fs.readFileSync("#{__dirname}/output/test7.html", 'utf-8')
+      r.toEqual "F"
+
+      r = expect fs.readFileSync("#{__dirname}/output/test8.html", 'utf-8')
+      r.toEqual "TEST_<html>bar</html>_TEST"
+
+      return
 
 
   it 'should append content when files share the same destination unless replace is specified', ->
-    result = cobuild.build [{
-        source:      'spec/samples/test1.html'
-        destination: 'spec/output/test9.html'
-        options:
-          replace: true
-      }
-      {
-        source:      'spec/samples/test2.html'
-        destination: 'spec/output/test9.html'
-        options:
-          replace: true
-      }
-      {
-        source:      'spec/samples/test1.html'
-        destination: 'spec/output/test10.html'
-      }
-      {
-        source:      'spec/samples/test2.html'
-        destination: 'spec/output/test10.html'
-      }]
 
-    r = expect result
-    r.toEqual cobuild
+    complete = false
 
-    r = expect fs.readdirSync("#{__dirname}/output/").length
-    r.toEqual 10
+    runs ->
 
-    r = expect fs.readFileSync("#{__dirname}/output/test9.html", 'utf-8')
-    r.toEqual "TEST_<html>bar</html>_TEST"
+      files = [{
+          source:      'spec/samples/test1.html'
+          destination: 'spec/output/test9.html'
+          options:
+            replace: true
+        }
+        {
+          source:      'spec/samples/test2.html'
+          destination: 'spec/output/test9.html'
+          options:
+            replace: true
+        }
+        {
+          source:      'spec/samples/test1.html'
+          destination: 'spec/output/test10.html'
+        }
+        {
+          source:      'spec/samples/test2.html'
+          destination: 'spec/output/test10.html'
+        }]
 
-    r = expect fs.readFileSync("#{__dirname}/output/test10.html", 'utf-8')
-    r.toEqual "TEST_<html>foo</html>_TESTTEST_<html>bar</html>_TEST"
+      result = cobuild.build { files: files }, ->
+        complete = true
 
+      expect(result).toEqual cobuild
+      return
+
+    waitsFor ->
+        complete
+      , 'Callback never called', 500
+
+    runs ->
+
+      r = expect fs.readdirSync("#{__dirname}/output/").length
+      r.toEqual 10
+
+      r = expect fs.readFileSync("#{__dirname}/output/test9.html", 'utf-8')
+      r.toEqual "TEST_<html>bar</html>_TEST"
+
+      r = expect fs.readFileSync("#{__dirname}/output/test10.html", 'utf-8')
+      r.toEqual "TEST_<html>foo</html>_TESTTEST_<html>bar</html>_TEST"
+
+  ###
 
   it 'should copy files it has no idea what else to do with', ->
     result = cobuild.build {
@@ -402,3 +550,4 @@ describe 'Built-in stylus renderer', ->
     result = cobuild.build stylus_css, 'styl'
     r = expect result
     r.toEqual 'A foobar tastes great with milk.'
+

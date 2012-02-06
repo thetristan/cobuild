@@ -19,6 +19,14 @@ module.exports = class Cobuild
 
   constructor: (@config) ->
 
+    console.error '------------------------------------------------'
+    console.error '------------------------------------------------'
+    console.error '------------------------------------------------'
+    console.error '------------------------------------------------'
+    console.error '------------------------------------------------'
+    console.error '------------------------------------------------'
+    console.error '------------------------------------------------'
+
     # Load our configuration
     throw new Error 'Config file must be specified to use cobuild.' unless @config
     @config           = require @config
@@ -47,129 +55,162 @@ module.exports = class Cobuild
 
 
   # -------------------------------------------
-  # Build+render method
+  # Build+render methods
+
+  _build_string: (params, callback) ->      
+
+    if !params.type?
+      callback 'You must specify a type if passing a string to the build method', null
+      return @
+    if !@validate_type params.type
+      callback "No valid renderers added for '#{params.type}' files", null
+      return @
+
+    # Render our content
+    @render params.string, params.type, params.options, callback
+    return @
+
+
+
+
+  _build_single_file: (params, callback) ->
+    
+    # Determine the type
+    type = params.type if params.type? 
+    type or= @get_type(params.file)
+
+    if !@validate_type type
+      callback "No valid renderers added for '#{params.type}' files", null
+      return @
+
+    params.options.file = 
+      source: params.file
+      destination: null
+      type: params.type 
+      options: params.options
+
+    util.load_file "#{@config.base_path}/#{params.file}", 
+      (err, file)=>
+        @render file.content, params.type, params.options, callback
+        return
+
+    return @
+
+
+
+
+  _build_single_file_object: (params, callback) ->
+
+    console.error "_BSFO", arguments
+
+    @validate_file params.file
+    
+    # Determine the type
+    type = params.type if params.type? 
+    type or= @get_type(params.file)
+
+    console.error "TYPE IS: ", type
+
+    # Do we have any file-specific overrides?
+    if params.file.type? and _.isString params.file.type
+      type = params.file.type
+    if params.file.options? and _.isObject params.file.options
+      params.options = _.extend {}, params.options, params.file.options
+
+    params.options.file = params.file
+    source      = "#{@config.base_path}#{params.file.source}"
+    destination = "#{@config.base_path}#{params.file.destination}"
+
+    # If it's a valid type, let's do our transform
+    if @validate_type type
+
+      # Load up our content
+      util.load_files source, 
+        (err, file)=>
+
+          console.error "_BSFO-LFCB", arguments
+
+          # If we're appending, is this the first time we're writing to this file? 
+          # If so, log it and turn off the append feature for our first write
+          if !params.options.replace && _.indexOf(@files_rendered, params.file.source) == -1 
+            params.options.replace = true
+            
+          @files_rendered.push params.file.source
+
+          @render file.content, type, params.options, 
+            (err, content)->
+              console.error "_BSFO-RFCB", arguments
+              util.save_file destination, content, params.options.replace, callback
+              return
+
+          return
+    
+    
+    # Otherwise, copy the file to its destination
+    else
+      util.copy_file source, destination, params.options.replace, callback
+    return @
+
+
+
+
+  _build_multiple_files: (params, callback) ->
+
+    console.error "_BMF", arguments
+
+    # Build each file
+    async.forEachSeries params.files, 
+      (f, next)=>
+        console.error "NEXT FILE", arguments
+        @build { file: f, type: params.type, options: params.options }, ->
+          console.error 'BUILD FINISHED AND MOVING ONWARD', arguments
+          console.error "NEXT METHOD: ", next
+          next()
+        return
+      (err)->
+        console.error "ALL FILES DONE", arguments
+        callback err
+        return
+
+    return @
+
+
+
 
   # Build one or more files with 
-  build: (file, type, opts = {}, callback) ->
+  build: (params, callback) ->
 
-    # Use a preset type or attempt to detect it?
-    single_type = _.isString type & type != ''
+    console.error "BUILD CALLED"
 
-    # Load a single file or an array of files? Or just loading a string to transform?
-    single_file = _.isString(file) and (opts.file? or @get_type(file) != "")
-    single_string = _.isString(file) and (!opts.file? or @get_type(file) == "")
+    single_string    = params.string?
+    single_file      = params.file? and _.isString params.file
+    single_file_obj  = params.file? and !_.isString params.file
+    multi_file       = params.files? and _.isArray params.files
 
-    # We can use the second param as our options if we didn't specify a type string
-    if _.isObject(type) and _.isFunction(opts) and !callback?
-      callback  = opts
-      opts      = type
-      type      = ''
+    console.error single_string, single_file, single_file_obj, multi_file
 
-    # We can use the second param as our callback if we didn't specify a type or any options
-    if _.isFunction(type) and !opts? and !callback?
-      callback  = type
-      opts      = {}
-      type      = ''
+    params.options or= {}
+    _.defaults params.options, @default_opts
 
-    _.defaults opts, @default_opts
-
-    # Done cleaning up, let's build out some files
+    callback or= ->
 
     # Single-string mode
     if single_string
-      
-      callback('You must specify a type if passing a string to the build method', null) unless single_type    
-      callback("No valid renderers added for '#{type}'", null) unless @validate_type type
+      return @_build_string params, callback
 
-      # Render our content
-      @render file, type, opts, callback
-      return @
+    # Single-file as a string mode
+    if single_file
+      return @_build_single_file params, callback
 
-    else
+    # Multiple file objects passed as an array
+    if multi_file
+      return @_build_multiple_files params, callback
 
-      # Single-file as a string mode
-      if single_file  
+    # Single file as an object
+    if single_file_obj
+      return @_build_single_file_object params, callback        
 
-        type = @get_type(file) unless single_type
-        if !@validate_type type
-          callback "No valid renderers added for '#{type}' files", null
-
-        opts.file = 
-          source: file
-          destination: null
-          type: type 
-          options: opts
-
-        util.load_file "#{@config.base_path}/#{file}", 
-          (err, file)->
-            @render file.content, type, opts, callback
-            return @
-
-        return
-
-
-      # Multiple files or single-file as an object mode
-      else
-
-        # Multiple file objects passed as an array
-        if _.isArray(file) 
-
-          # Build each file
-          async.forEachSeries file, 
-            (f, next)=>
-              @build f, type, opts, next
-              return
-            (err)->
-              callback(err,results)
-
-          return @
-
-
-        # Single file as an object
-        else
-                  
-          @validate_file file
-
-          # Determine the type
-          type = @get_type(file) unless single_type
-
-          # Do we have any file-specific overrides?
-          if file.type != undefined && _.isString file.type
-            type = file.type
-          if file.options != undefined && _.isObject file.options
-            opts = _.extend {}, opts, file.options
-
-          opts.file = file
-          source      = "#{@config.base_path}#{file.source}"
-          destination = "#{@config.base_path}#{file.destination}"
-
-          # If it's a valid type, let's do our transform
-          if @validate_type type
-
-            # Load up our content
-            util.load_files source, 
-              (err, content)=>
-
-                # If we're appending, is this the first time we're writing to this file? 
-                # If so, log it and turn off the append feature for our first write
-                if !opts.replace && _.indexOf(@files_rendered, file.source) == -1 
-                  opts.replace = true
-                  
-                @files_rendered.push file.source
-
-                @render content, type, opts, 
-                  (err, content)->
-                    util.save_file destination, content, opts.replace, callback
-                    return
-
-                return
-          
-          
-          # Otherwise, copy the file to its destination
-          else
-            util.copy_file source, destination, opts.replace, callback
-
-
+    return @
 
 
   # Render text via one of our preset renderers
@@ -190,14 +231,16 @@ module.exports = class Cobuild
       (content, next)->
         async.reduce renderers, content, 
           (curr_content, curr_renderer, cb)->
-            current_renderer?.render? curr_content, type, opts, cb
-          (err, result)->
-            next err, result
+            curr_renderer?.render? curr_content, type, opts, cb
+            return
+          next
 
       # Postprocessing?
       (content, next)->
         if _.isFunction opts.postprocess
           content = opts.postprocess content, type, opts, next
+        else
+          next null, content
 
     ], callback
 
@@ -216,8 +259,11 @@ module.exports = class Cobuild
   # Attempt to detect the file type
   get_type: (file) ->
 
-    if _.isObject file
+    console.error "GET_TYPE_RESULTS", file
+
+    if !_.isString file
       file = file.source
+
 
     # Check for illegal characters
     illegals = ['?','<','>','\\',':','*','|','”']
