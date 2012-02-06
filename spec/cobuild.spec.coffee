@@ -147,8 +147,6 @@ describe 'Cobuild build system', ->
       .add_renderer('foo', "test3_r")
     return
 
-  ###
-
   it 'should render a string with "render" with multiple renderers', ->
     cobuild
       .add_renderer('test', "test2_r")
@@ -212,32 +210,49 @@ describe 'Cobuild build system', ->
 
   it 'should render a single file w/o specifying a type', ->
 
-    cobuild.build { file: 'spec/samples/test1.html' }, 
-      (err,data)->
-        expect(data).toEqual 'TEST_<html>foo</html>_TEST'
-        return
+    complete = false
+
+    runs ->
+      cobuild.build { file: 'spec/samples/test1.html' }, 
+        (err,data)=>
+          console.error arguments
+          complete = true
+          @data = data
+          return
+      return
+
+    waitsFor ->
+        complete
+      , 'callback didn\'t fire', 500
+
+    runs ->
+      expect(@data).toEqual 'TEST_<html>foo</html>_TEST'
+      return
 
     return
 
   it 'should fail to render a single file w/ an invalid type', ->
     
+    complete = false
+
     runs ->
       cobuild.build { file: 'spec/samples/foo.gif' },
         (err, data)=>
-          #console.log "BUILD RESULT", arguments
+          complete = true
           @err = err
           return
       return
 
-    waits 1000
+    waitsFor ->
+        complete
+      , 'callback didn\'t fire', 500
+
 
     runs ->
       expect(@err).toEqual "No valid renderers added for 'gif' files"
       return
 
     return
-
-  ### 
 
   it 'should render an array of files', ->
     
@@ -409,8 +424,7 @@ describe 'Cobuild build system', ->
       r.toEqual "TEST_<html>bar</html>_TEST"
 
       return
-
-
+  
   it 'should append content when files share the same destination unless replace is specified', ->
 
     complete = false

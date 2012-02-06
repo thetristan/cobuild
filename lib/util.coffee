@@ -28,21 +28,25 @@ prep_content = (content, callback)->
 # Load file contents from an array
 load_files = (files, callback) ->
 
-  console.error "LF", arguments
+  
 
   # Load file contents from a single file
-  if typeof files == 'string'
+  if _.isString files
+    
     content = load_file files, callback
 
   # Load file contents from multiple files
   if _.isArray files
+    
     content = []
 
     async.forEachSeries files, 
       (file, next) ->
+        
         load_file file,
           (err, data)->
             content.push data
+            next()
             return
         return
       (err) ->
@@ -63,8 +67,11 @@ load_file = (file, callback) ->
       if !exists
         callback "File #{file} doesn't exist.", null
       else
+        
         fs.readFile file, 'utf-8',
           (err, data)->
+            
+            
             callback err, 
               file_name: file
               content: data
@@ -142,38 +149,40 @@ save_files = (files, content, replace = false, callback) ->
 # Save a single file
 save_file = (file, content, replace = false, callback) ->
 
-  console.error "SF", arguments
+  
   file_mode = 'w'
 
   async.series [
 
     # Check the path first and create any needed directories
     (next)->
-      console.error "SFCP", arguments
+      
       check_fix_paths file, next
 
     # Deal with any existing files that need to be replaced
     (next)->
-      console.error "SFEX", arguments
+      
       path.exists file, (exists)->
         if exists
           if replace
             fs.unlink file, next
-          else
-            file_mode = 'a'
+            return
+    
+          file_mode = 'a'
         next()
         return
       return
 
     # Open the file and write the contents back to it
     (next)->
-      console.error "SAVING FILE", arguments
+      
       fs.open file, file_mode, (err, fd)->
-        console.error "FILE OPENED", arguments
-        fs.write fd, content, (err, written)->
-          console.error "CONTENT WRITTEN", arguments
+        
+        buffer = new Buffer(content, 'utf-8')
+        fs.write fd, buffer, 0, buffer.length, null, (err, written)->
+          
           fs.close fd, (err)->
-            console.error "FILE CLOSED", arguments
+            
             next()
             return
           return
@@ -184,7 +193,8 @@ save_file = (file, content, replace = false, callback) ->
   (err)->
     result = true
     if err then result = false
-    console.error "SAVE DONE", arguments
+    
+    
     callback err, result
     return
   

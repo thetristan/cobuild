@@ -19,13 +19,13 @@ module.exports = class Cobuild
 
   constructor: (@config) ->
 
-    console.error '------------------------------------------------'
-    console.error '------------------------------------------------'
-    console.error '------------------------------------------------'
-    console.error '------------------------------------------------'
-    console.error '------------------------------------------------'
-    console.error '------------------------------------------------'
-    console.error '------------------------------------------------'
+    
+    
+    
+    
+    
+    
+    
 
     # Load our configuration
     throw new Error 'Config file must be specified to use cobuild.' unless @config
@@ -80,7 +80,7 @@ module.exports = class Cobuild
     type or= @get_type(params.file)
 
     if !@validate_type type
-      callback "No valid renderers added for '#{params.type}' files", null
+      callback "No valid renderers added for '#{type}' files", null
       return @
 
     params.options.file = 
@@ -101,7 +101,7 @@ module.exports = class Cobuild
 
   _build_single_file_object: (params, callback) ->
 
-    console.error "_BSFO", arguments
+    
 
     @validate_file params.file
     
@@ -109,7 +109,7 @@ module.exports = class Cobuild
     type = params.type if params.type? 
     type or= @get_type(params.file)
 
-    console.error "TYPE IS: ", type
+    
 
     # Do we have any file-specific overrides?
     if params.file.type? and _.isString params.file.type
@@ -128,7 +128,6 @@ module.exports = class Cobuild
       util.load_files source, 
         (err, file)=>
 
-          console.error "_BSFO-LFCB", arguments
 
           # If we're appending, is this the first time we're writing to this file? 
           # If so, log it and turn off the append feature for our first write
@@ -139,7 +138,7 @@ module.exports = class Cobuild
 
           @render file.content, type, params.options, 
             (err, content)->
-              console.error "_BSFO-RFCB", arguments
+              
               util.save_file destination, content, params.options.replace, callback
               return
 
@@ -156,19 +155,19 @@ module.exports = class Cobuild
 
   _build_multiple_files: (params, callback) ->
 
-    console.error "_BMF", arguments
+    
 
     # Build each file
     async.forEachSeries params.files, 
       (f, next)=>
-        console.error "NEXT FILE", arguments
+        
         @build { file: f, type: params.type, options: params.options }, ->
-          console.error 'BUILD FINISHED AND MOVING ONWARD', arguments
-          console.error "NEXT METHOD: ", next
+          
+          
           next()
         return
       (err)->
-        console.error "ALL FILES DONE", arguments
+        
         callback err
         return
 
@@ -180,14 +179,14 @@ module.exports = class Cobuild
   # Build one or more files with 
   build: (params, callback) ->
 
-    console.error "BUILD CALLED"
+    
 
     single_string    = params.string?
     single_file      = params.file? and _.isString params.file
     single_file_obj  = params.file? and !_.isString params.file
     multi_file       = params.files? and _.isArray params.files
 
-    console.error single_string, single_file, single_file_obj, multi_file
+    
 
     params.options or= {}
     _.defaults params.options, @default_opts
@@ -259,7 +258,7 @@ module.exports = class Cobuild
   # Attempt to detect the file type
   get_type: (file) ->
 
-    console.error "GET_TYPE_RESULTS", file
+    
 
     if !_.isString file
       file = file.source
