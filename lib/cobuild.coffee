@@ -19,17 +19,8 @@ module.exports = class Cobuild
 
   constructor: (@config) ->
 
-    
-    
-    
-    
-    
-    
-    
-
     # Load our configuration
-    throw new Error 'Config file must be specified to use cobuild.' unless @config
-    @config           = require @config
+    throw new Error 'Config options must be specified to use cobuild.' unless @config
     @renderers        = {}
     @files_rendered   = []
 

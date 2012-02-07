@@ -1,8 +1,4 @@
-_       = require 'underscore'
 stylus  = require 'stylus'
-fs      = require 'fs'
-
-
     
     
 ###

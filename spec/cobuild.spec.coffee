@@ -6,6 +6,13 @@ path     = require 'path'
 
 Cobuild  = require '../lib/cobuild'
 
+test_config = 
+  base_path:      "#{__dirname}/../"
+  renderer_path:  "spec/renderers/"
+  eco:
+    global_vars: 
+      test_var:   'foobar'
+      test_var_2: 'raboof'
 
 ###
 * 
@@ -30,7 +37,7 @@ _.each fs.readdirSync("#{__dirname}/output/"), (f) ->
 cobuild = null
 
 reset = ->
-  cobuild = new Cobuild "#{__dirname}/config.coffee"
+  cobuild = new Cobuild test_config
 
 
 # -------------------------------------------
@@ -554,7 +561,6 @@ describe 'Cobuild build system', ->
       cobuild.build { files: files }, 
         (err)->
           complete = true
-          console.error arguments
           @err = err
           return
       return
