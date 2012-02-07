@@ -92,15 +92,11 @@ module.exports = class Cobuild
 
   _build_single_file_object: (params, callback) ->
 
-    
-
     @validate_file params.file
     
     # Determine the type
     type = params.type if params.type? 
     type or= @get_type(params.file)
-
-    
 
     # Do we have any file-specific overrides?
     if params.file.type? and _.isString params.file.type
@@ -147,8 +143,6 @@ module.exports = class Cobuild
 
   _build_multiple_files: (params, callback) ->
 
-    
-
     # Build each file
     async.forEachSeries params.files, 
       (f, next)=>
@@ -166,17 +160,13 @@ module.exports = class Cobuild
 
 
 
-  # Build one or more files with 
+  # Build one or more files 
   build: (params, callback) ->
-
-    
 
     single_string    = params.string?
     single_file      = params.file? and _.isString params.file
     single_file_obj  = params.file? and !_.isString params.file
     multi_file       = params.files? and _.isArray params.files
-
-    
 
     params.options or= {}
     _.defaults params.options, @default_opts
@@ -200,6 +190,8 @@ module.exports = class Cobuild
       return @_build_single_file_object params, callback        
 
     return @
+
+
 
 
   # Render text via one of our preset renderers
@@ -237,6 +229,7 @@ module.exports = class Cobuild
 
 
 
+
   # -------------------------------------------
   # File detection/handling
 
@@ -245,14 +238,13 @@ module.exports = class Cobuild
     type != '' and @renderers[type]?
 
 
+
+
   # Attempt to detect the file type
   get_type: (file) ->
 
-    
-
     if !_.isString file
       file = file.source
-
 
     # Check for illegal characters
     illegals = ['?','<','>','\\',':','*','|','”']
@@ -262,6 +254,8 @@ module.exports = class Cobuild
     if has_illegals then return ''
 
     return path.extname(file).replace('.','')
+
+
 
 
   # Validate file to make sure it contains all the needed items.
@@ -286,6 +280,8 @@ module.exports = class Cobuild
     @renderers[type].push { name: renderer, renderer: null }
     @
 
+
+
   
   # Remove a renderer
   remove_renderer: (type, renderer) ->
@@ -295,6 +291,8 @@ module.exports = class Cobuild
     else
       @renderers[type] = []
     @
+
+
 
   
   # Attempt to load a renderer, or return null if it can't be loaded
@@ -311,8 +309,9 @@ module.exports = class Cobuild
       catch err
         return null
 
-
     result
+
+
 
 
   # Load and initialize the renderer we want to use
