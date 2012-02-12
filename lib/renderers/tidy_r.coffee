@@ -5,7 +5,7 @@ spawn   = require('child_process').spawn
 * Requires tidy to be installed
 *
 * @author Tristan Blease
-* @version 0.0.0
+* @version 0.0.1 
 * 
 ###
 

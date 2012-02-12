@@ -19,7 +19,7 @@ test_config =
 * Cobuild NodeJS tests
 *
 * @author Tristan Blease
-* @version 0.0.0
+* @version 0.0.1 
 * 
 ###
 

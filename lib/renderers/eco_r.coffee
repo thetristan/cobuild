@@ -7,7 +7,7 @@ fs     = require 'fs'
 * Eco/template helper class for Cobuild NodeJS build system
 *
 * @author Tristan Blease
-* @version 0.0.0
+* @version 0.0.1 
 * 
 ###
 
@@ -26,7 +26,7 @@ class Eco_helpers
 * Eco/template builder class for Cobuild NodeJS build system
 *
 * @author Tristan Blease
-* @version 0.0.0
+* @version 0.0.1 
 * 
 ###
 

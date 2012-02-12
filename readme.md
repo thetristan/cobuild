@@ -1,38 +1,76 @@
 # Cobuild for NodeJS
 
-Cobuild isn't a build system, but it is a system that helps you build build systems faster. The module is fully synchronous and allows you to pass one or more files through it to transform text-based content by sending it through one or more renderers based on filetype. 
+---
 
-You can quickly process your CSS, compress your JS, and even run your HTML through a template parser through a single interface.
+1. [Introduction][]
+2. [Basic Usage][]
+2. [Basic Methods][]
+3. [Build/Render Options][]
+4. [Advanced Methods][]
+5. [Creating Your Own Renderers][]
 
-Specifying the same destination for multiple text files will allow you to append multiple files onto a single file. If a renderer supports it, you can concatenate text files. Any files with unknown/unspecified content types are simply copied to their destinations, so you can pass images and other files right alongside with your text files and they'll end up right where they belong.
+---
+
+### Introduction
+
+Cobuild isn't a build system, but it is a system that helps you build build systems faster. This asynchronous module allows you to pass one or more files through it to transform text-based content by sending it through one or more renderers based on their filetype. 
+
+You can quickly process your CSS, compress your JS, run your HTML through a template parser... all through a single interface.
+
+Specifying the same destination for multiple text files will allow you to append multiple files onto a single file. If a renderer supports it, you can concatenate text files. Any files with unknown/unspecified content types are simply copied to their destinations, so you can pass in images and other files right alongside with your text files and they'll end up right where they belong.
+
+All examples (as well as the module itself) are written in Coffeescript.
 
 ---
 
 ### Basic Usage
 
-    var cobuild = require('cobuild'),
-        release = new cobuild('./config.json'),
-        files = [{ 
-          source:      'src/example.js',
-          destination: 'release/example.js' 
-        },{
-          source:      'src/example2.js',    // example2.js will be appended onto this
-          destination: 'release/example.js'  // file since we already created it above
-        },{
-          source:      'src/example.styl',
-          destination: 'release/example.css'
-        }];
+    # Load the cobuild module
+    cobuild = require 'cobuild'
 
-    release 
-      .add_renderer('styl','stylus_r')
-      .add_renderer('js', 'uglify_r')     // Stack multiple renderers on the same file type;
-      .add_renderer('js', 'uppercase_r')  // content will be rendered in the order you specify
-      .build(files, { 
-        minify: true,                     // Specify options to be passed to renderers
-        preprocess: function(content, type, options) { 
-          return content;  
-        }  
-      });
+    # Create our builder and pass it our global configuration options
+    builder = new cobuild 
+      base_path:     "#{__dirname}/"
+      renderer_path: "#{__dirname}/renderers/"
+      eco:
+        global:
+          var1:      "foo"
+          var2:      "bar"
+      stylus:
+        minify:      true
+
+    # Array of file description objects
+    files = [{
+        source:      'src/example.js'
+        destination: 'release/example.js'
+      }
+      {
+        source:      'src/example.styl'
+        destination: 'release/example.css'
+      }
+      {
+        source:      'src/example.html.eco'
+        destination: 'release/example.html'
+      }]
+
+    # Options specific to the build we're going to run
+    # In this case, we're overriding a global setting from above
+    options = 
+      stylus:
+        minify: false
+
+    # Let's do it
+    builder
+      .add_renderer('styl', 'stylus_r')
+      .add_renderer('js', 'uglifyjs_r')
+      .add_renderer('eco', 'eco_r')
+      .add_renderer('eco', 'uppercase_r')
+      .build
+          files:   files
+          options: options
+        , (err, result) ->
+          console.log "Build successful" unless err
+          return
 
 ---
 
@@ -40,76 +78,52 @@ Specifying the same destination for multiple text files will allow you to append
 
 #### constructor(`config`)
 
-`config` is the path (relative or absolute) to the project config file cobuild requires.  This is loaded at runtime with `require`, so it can be a JS or JSON file. See examples/config.coffee and examples/config.json for examples.
+`config` is an object that contains the global configuration settings. Renderers have access to this object, so it's a good place to store global settings for those, too.
 
 #### add_renderer(`type`, `path_to_render`)
 
-Use this method to add a renderer to the file type specified by `type`. Renderers are loaded (via `require`) on first use (via one of the `build` methods below), and they are loaded from the renderer path specified in your config file, or from one of 	. The build method will render each type in the order specified by successive calls to this method.
+Use this method to add a renderer to the file type specified by `type`. Renderers are loaded (via `require`) on first use (via one of the `build` methods below), and they are loaded from the renderer path specified in your config file, or from Cobuild's default render path. The build method will render each type in the order specified by successive calls to this method.
 
 Returns `this` for chaining
 
-#### build(`content (string)`, `type`, `options`)
-Use Cobuild to render the string `content` using the renderer specified in `type`. `options` is an object containing any extra options that you want passed to the renderer.  If a renderer doesn't exist for the provided type, the method will throw an exception.
+#### build(`params`, `callback`)
+Use Cobuild to transform the content based on what you pass in via the `params` object.
 
-Returns `string`
+Render multiple files at once (or a single file you want to be saved after rendering):
 
-#### build(`file (string)`, `type`, `options`)
-Use Cobuild to load and render `file` using the renderer specified for `type`. `options` is an object containing any extra options that you want passed to the renderer. If a renderer doesn't exist for the provided type, the method will throw an exception.
+    files: (array)     # An array of file objects (see below)
+                       # E.g. [{ source: 'src/my_file.html', 
+                       # destination: 'release/my_file.html' }]
 
-Returns `string`
+Render one file at a time:
 
-#### build(`file (string)`, `options`)
-Use Cobuild to load and render`file`. The renderer to be used will be chosen based on the file extension of `file`. `options` is an object containing any extra options that you want passed to the renderer. If a renderer doesn't exist for the provided type, the method will throw an exception.
+    file: (string)    # String containing a file path relative 
+                      # to the base_path (single file)
+                      # E.g. 'src/my_file.html'
+                     
+Render a single string:
 
-Returns `string`
+    string: (string)   # String containing the text you want to transform
+                       # E.g. 'Transform me!'
 
-#### build(`files (array)`, `type`, `options`)
-Use Cobuild to load, render, and save, all `files` that are passed to the method. `files` is an array of objects that should be formatted as such:
+Force cobuild to render content as a certain type (required if rendering a string)
 
-	{
-		// Required – where to load the file source from
-		source: 'src/file.html'
-		
-		// Required – where to save the rendered file to
-		destination: 'release/file.html'
-		
-		// Optional – render with a specific type; overrides the type passed above
-		type: 'template'
-		
-		// Optional – render with specific options; overrides the options passed above
-		options: { ... } 
-	}
-	
-`options` is an object containing any extra options that you want passed to the renderer. If a renderer doesn't exist for the provided type, unlike the string/single file methods above, this method will copy the source file to the destination without doing any processing.
+    type: (string)     # If a file is specified, the type is 
+                       # automatically detected from the file extension,
+                       # but if specifying a string (or if you want to force 
+                       # files to be transformed as a certain type),
+                       # E.g. 'html'
+                       
+Build-specific options. These will override any global settings you've already specified.
+                     
+    options: (object)  # Optional settings to be passed to the renderers. 
+                       # E.g. { stylus: { minify: true } } 
+                       
+If a renderer doesn't exist for the provided type, the method will copy the file to its destination (if specifying multiple files), or output the untransformed content when passing a single file or a string.
 
-If a file object is missing any required information, the method will throw an exception.
+The callback function takes two arguments, `err` and `result`. 
 
-Returns `this` for chaining
-
-#### build(`files (array)`, `options`)
- Use Cobuild to load, render, and save, all `files` that are passed to the method. `files` is an array of objects that should be formatted as such:
-
-	{
-		// Required – where to load the file source from
-		source: 'src/file.html'
-		
-		// Required – where to save the rendered file to
-		// If you specify the same destination for one or more files, they will 
-		// be concatenated together in the order they are specified
-		destination: 'release/file.html'
-		
-		// Optional – render with a specific type
-		type: 'template'
-		
-		// Optional – render with specific options; overrides the options passed above
-		options: { ... } 
-	}
-	
-`options` is an object containing any extra options that you want passed to the renderer. If a renderer doesn't exist for the provided type, unlike the string/single file methods above, this method will copy the source file to the destination without doing any processing.
-
-If a file object is missing any required information, the method will throw an exception.
-
-Returns `this` for chaining
+`err` will contain any uncatchable errors (if any) that were encountered when rendering the files, and `result` will contain the results of the build. If you specified multiple files, `result` will be a boolean `true` or `false`, if you specified a single file or string, `result` will contain the transformed text.
 
 ---
 		
@@ -117,39 +131,29 @@ Returns `this` for chaining
 
 The only three build-related options are callbacks that are ran on pre and post processing of content, and an option to replace files instead of appending content when multiple files are specified with the same output destination. These options can be overriden on a per-file basis using the `build` method above.
 
-	{
-		// These take the form of: 
-		// function(content, type, options) { 
-		//    ... 
-		//    return content;
-		// } 
-		preprocess: [callback],
-		postprocess: [callback],
-		
-		
-		// Replace files or append (text-based files), 
-		replace: false (default) | true
-	}
-	
+    preprocess: [callback]   # Process the content before it hits the 
+                             # rendering chain so you can strip metadata,
+                             # or do other transforms 
+                               
+    postprocess: [callback]  # Process the content after its been rendered
+                             # Last chance to make changes before it's saved/output
+                               
+    replace: false           # Specifies whether cobuild should replace files 
+                             # or append to them when in 
+  
 ---
 
 ### Advanced Methods
 
 #### render(`content`, `renderer`, `options`)
 
-This method is called if you want to render a string (`content`) and pass in your own `renderer` that's already been initialized. `renderer` must be an instance of an Object that inherits CobuildRenderer; these objects are only required to implement the render and type methods as outlined below. The `build` method above uses this internally to render any content/files passed to it.
+This method is called if you want to render a string (`content`) and pass in your own `renderer` that's already been initialized. `renderer` must be an instance of an object that implements the render method as outlined below. The `build` method above uses this internally to render any content/files passed to it.
 
 Returns `string`
 
-#### remove_renderer(`type`)
+#### remove_renderer(`type`, `path_to_render (optional)`)
 
-Use this method to remove all renderers from the file type specified by `type`. 
-
-Returns `this` for chaining
-
-#### remove_renderer(`type`, `path_to_render`)
-
-Use this method to remove a specific renderer from the file type specified by `type`. You must pass the same path you used to add the renderer for this method to remove it.
+Use this method to remove all renderers from the file type specified by `type`.  Optionally, if you only want to remove a specific renderer, you can pass the same path you used to add the renderer for this method to remove just that renderer.
 
 Returns `this` for chaining
 
@@ -159,19 +163,23 @@ Returns `this` for chaining
 
 This is where Cobuild really shines as it's easy to create pluggable renderers with very little code. Renderers are just objects that implement the render method:
 
-    render(`content`,`options`) {  ...  }
+    render = (`content`, `type`, `options`, `callback`) ->
 
-It's your responsiblity to a return the string value of any transformations you make to `content`. If you want to make any parts of your renderer user-configurable, you can just include those options when calling `build` and they'll be made available to your renderer via the `options` parameter. In addition, any configuration options set via the cobuild configuration will be included and available under `options.config` If a file is passed to the build method (via string or object), an object describing that file (that includes the source, destination, etc.) will be available at `options.file`
+It's your responsiblity to a return the string value of any transformations you make via the provided callback. If you want to make any parts of your renderer user-configurable, you can just include those options when calling `build` and they'll be made available to your renderer via the `options` parameter. In addition, any configuration options set via the cobuild configuration will be included and available under `options.config` If a file is passed to the build method (whether build is called with a single file or multiple files), an object describing the current file being processed (that includes the source, destination, etc.) will be available at `options.file`.
 
-By including your renderer in your `renderer_path` (specified in the configuration file you passed to Cobuild during initialization), Cobuild will use your renderer when you pass it to the `add_renderer` method. The renderer itself will be initialized when it's first used, and it's instance will persist until it's been removed; this lets you do things like track statistics if you want.
+By including your renderer in your `renderer_path` (specified in the configuration file you passed to Cobuild during initialization), Cobuild will use your renderer when you pass it to the `add_renderer` method. The renderer itself will be initialized when it's first used, and it's instance will persist until it's been removed; this lets you do things like track statistics and thi if you want.
 
 To keep naming consistent and make renderers easily identifiable, the official renderers will always have an `_r` suffix at the end of them. I recommend you do the same with your renderers.
 
+---
+
 ### Example Renderer
 
-You can always view the renderers in the lib/renderers folder for reference (there are renderers for eco, stylus, and uglify), but here is a quick example of a renderer (in CoffeeScript):
+You can always view the renderers in the lib/renderers folder for reference (there are renderers for eco, stylus, and tidy), but here is a quick example of a renderer (in CoffeeScript):
 
-    module.exports = class Test2_r
-      constructor: ()->
-      render: (content, options) ->
-        content.toLowerCase()
+    module.exports = class Stylus_r 
+
+      render: (content, type, options, callback) ->
+        styl_opts = options.stylus || {}
+        styl_opts.filename = options.file?.source || ''
+        stylus.render content, styl_opts, callback
