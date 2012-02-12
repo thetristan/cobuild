@@ -163,9 +163,13 @@ Returns `this` for chaining
 
 This is where Cobuild really shines as it's easy to create pluggable renderers with very little code. Renderers are just objects that implement the render method:
 
-    render = (`content`, `type`, `options`, `callback`) ->
+    render = (`content`, `type`, `options`, `callback`) -> ...
 
-It's your responsiblity to a return the string value of any transformations you make via the provided callback. If you want to make any parts of your renderer user-configurable, you can just include those options when calling `build` and they'll be made available to your renderer via the `options` parameter. In addition, any configuration options set via the cobuild configuration will be included and available under `options.config` If a file is passed to the build method (whether build is called with a single file or multiple files), an object describing the current file being processed (that includes the source, destination, etc.) will be available at `options.file`.
+It's your responsiblity to a return the string value of any transformations you make via the provided callback. 
+
+    callback = (`err`, `rendered_content`) -> ...
+
+If you want to make any parts of your renderer user-configurable, you can just include those options when calling `build` and they'll be made available to your renderer via the `options` parameter. In addition, any configuration options set via the cobuild configuration will be included and available under `options.config` If a file is passed to the build method (whether build is called with a single file or multiple files), an object describing the current file being processed (that includes the source, destination, etc.) will be available at `options.file`.
 
 By including your renderer in your `renderer_path` (specified in the configuration file you passed to Cobuild during initialization), Cobuild will use your renderer when you pass it to the `add_renderer` method. The renderer itself will be initialized when it's first used, and it's instance will persist until it's been removed; this lets you do things like track statistics and thi if you want.
 
