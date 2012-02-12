@@ -2,20 +2,20 @@
 
 ---
 
-1. [Introduction][]
-2. [Basic Usage][]
-2. [Basic Methods][]
-3. [Build/Render Options][]
-4. [Advanced Methods][]
-5. [Creating Your Own Renderers][]
+1. [Introduction](#intro)
+2. [Basic Usage](#usage)
+2. [Basic Methods](#basic)
+3. [Build/Render Options](#options)
+4. [Advanced Methods](#advanced)
+5. [Creating Your Own Renderers](#renderers)
 
 ---
 
-### Introduction
+<h3 id="intro">Introduction</h3>
 
 Cobuild isn't a build system, but it is a system that helps you build build systems faster. This asynchronous module allows you to pass one or more files through it to transform text-based content by sending it through one or more renderers based on their filetype. 
 
-You can quickly process your CSS, compress your JS, run your HTML through a template parser... all through a single interface.
+You can quickly process your CSS, compress your JS, run your HTML through a template parser, or process any other text document... all through a single interface.
 
 Specifying the same destination for multiple text files will allow you to append multiple files onto a single file. If a renderer supports it, you can concatenate text files. Any files with unknown/unspecified content types are simply copied to their destinations, so you can pass in images and other files right alongside with your text files and they'll end up right where they belong.
 
@@ -23,7 +23,7 @@ All examples (as well as the module itself) are written in Coffeescript.
 
 ---
 
-### Basic Usage
+<h3 id="usage">Basic Usage</h3>
 
     # Load the cobuild module
     cobuild = require 'cobuild'
@@ -37,7 +37,7 @@ All examples (as well as the module itself) are written in Coffeescript.
           var1:      "foo"
           var2:      "bar"
       stylus:
-        minify:      true
+        foo:         "bar"
 
     # Array of file description objects
     files = [{
@@ -57,7 +57,7 @@ All examples (as well as the module itself) are written in Coffeescript.
     # In this case, we're overriding a global setting from above
     options = 
       stylus:
-        minify: false
+        foo: "foo"
 
     # Let's do it
     builder
@@ -74,7 +74,7 @@ All examples (as well as the module itself) are written in Coffeescript.
 
 ---
 
-### Basic Methods
+<h3 id="basic">Basic Methods</h3>
 
 #### constructor(`config`)
 
@@ -117,7 +117,7 @@ Force cobuild to render content as a certain type (required if rendering a strin
 Build-specific options. These will override any global settings you've already specified.
                      
     options: (object)  # Optional settings to be passed to the renderers. 
-                       # E.g. { stylus: { minify: true } } 
+                       # E.g. { stylus: { foo: "bar" } } 
                        
 If a renderer doesn't exist for the provided type, the method will copy the file to its destination (if specifying multiple files), or output the untransformed content when passing a single file or a string.
 
@@ -127,7 +127,7 @@ The callback function takes two arguments, `err` and `result`.
 
 ---
 		
-### Build/Render Options
+<h3 id="options">Build/Render Options</h3>
 
 The only three build-related options are callbacks that are ran on pre and post processing of content, and an option to replace files instead of appending content when multiple files are specified with the same output destination. These options can be overriden on a per-file basis using the `build` method above.
 
@@ -141,9 +141,19 @@ The only three build-related options are callbacks that are ran on pre and post 
     replace: false           # Specifies whether cobuild should replace files 
                              # or append to them when in 
   
+Callbacks specified for preprocess/postprocess should be in the form of:
+
+    postprocess: (content, type, options, callback) -> ...
+
+Where `content` is a string containing content being rendered, `type` is the type of content being rendered, `options` are the build-specific options passed to the current build process, and `callback` is the function you need to call after you're finished processing the content to continue the render process.  
+
+The signature for this callback is:
+
+    callback = (`err`, `processed_content`) -> ...
+
 ---
 
-### Advanced Methods
+<h3 id="advanced">Advanced Methods</h3>
 
 #### render(`content`, `renderer`, `options`)
 
@@ -159,7 +169,7 @@ Returns `this` for chaining
 
 ---
 
-### Creating Your Own Renderers
+<h3 id="renderers">Creating Your Own Renderers</h3>
 
 This is where Cobuild really shines as it's easy to create pluggable renderers with very little code. Renderers are just objects that implement the render method:
 
