@@ -10,7 +10,7 @@ test_config =
   base_path:      "#{__dirname}/../"
   renderer_path:  "spec/renderers/"
   eco:
-    global: 
+    global:
       test_var:   'foobar'
       test_var_2: 'raboof'
 

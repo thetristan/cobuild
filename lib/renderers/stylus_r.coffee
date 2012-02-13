@@ -6,7 +6,6 @@ stylus  = require 'stylus'
 *
 * @author Tristan Blease
 * @version 0.0.1 
-* 
 ###
 
 module.exports = class Stylus_r 
