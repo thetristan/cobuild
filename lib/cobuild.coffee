@@ -25,7 +25,7 @@ module.exports = class Cobuild
     @files_rendered   = []
 
     @clean_up_config()
-
+    
     @default_opts =
       preprocess:   null
       postprocess: null
