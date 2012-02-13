@@ -35,7 +35,7 @@ module.exports = class Eco_r
   constructor: ->
 
   render: (content, type, options, callback) ->
-    global = options.config.eco.global || {} 
+    global = options.config.eco?.global || {} 
     context = new Eco_helpers(global, options.config.base_path)
     callback null, eco.render content, context
 
