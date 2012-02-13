@@ -212,7 +212,8 @@ module.exports = class Cobuild
       (content, next)->
         async.reduce renderers, content, 
           (curr_content, curr_renderer, cb)->
-            curr_renderer?.render? curr_content, type, opts, cb
+            result = curr_renderer?.render? curr_content, type, opts, cb
+            if result == null then cb null, curr_content
             return
           next
 
@@ -307,6 +308,7 @@ module.exports = class Cobuild
         current_path = "#{__dirname}/renderers/#{renderer}"
         result = require current_path
       catch err
+        throw new Error "Couldn't load renderer '#{renderer}'"
         return null
 
     result
