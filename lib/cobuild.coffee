@@ -26,6 +26,11 @@ module.exports = class Cobuild
 
     @clean_up_config()
 
+    if @config.renderers
+      _.each @config.renderers, (val, key)->
+        @add_renderer key, val
+        return
+ 
     @default_opts =
       preprocess:   null
       postprocess: null
