@@ -10,7 +10,7 @@ test_config =
   base_path:      "#{__dirname}/../"
   renderer_path:  "spec/renderers/"
   eco:
-    global:
+    global: 
       test_var:   'foobar'
       test_var_2: 'raboof'
 
@@ -29,10 +29,19 @@ console.log "----------------------------------"
 # CLEAN UP
 console.log "\nCleaning up from previous tests..."
 
-_.each fs.readdirSync("#{__dirname}/output/"), (f) ->
-  console.log colorize.ansify "#green[  removing #{__dirname}/output/#{f}]"
-  fs.unlinkSync "#{__dirname}/output/#{f}"
-  return
+clean_up = (dir_name)->
+  _.each fs.readdirSync(dir_name), (f) ->
+    current_path = "#{dir_name}#{f}"
+    console.log colorize.ansify "#green[  removing #{current_path}]"
+    if fs.lstatSync(current_path).isDirectory()
+      current_path = "#{current_path}/"
+      clean_up current_path
+      fs.rmdir current_path
+    else
+      fs.unlinkSync current_path
+    return
+
+clean_up "#{__dirname}/output/"
 
 cobuild = null
 
@@ -78,7 +87,11 @@ describe 'Cobuild render system', ->
     result = cobuild
       .add_renderer('test', "foo_r")      
     
-    cobuild.get_renderers('test')
+    try 
+      cobuild.get_renderers('test')
+    catch err
+      # Error caught
+
 
     r = expect result
     r.toEqual cobuild
@@ -106,9 +119,11 @@ describe 'Cobuild render system', ->
     r = expect cobuild.renderers['test'].length
     r.toEqual 1
 
-  it 'should return null loading an unknown renderer', ->
-    r = expect cobuild.load_renderer 'foo'
-    r.toEqual null
+  it 'should throw an error when loading an unknown renderer', ->
+    try
+      r = expect cobuild.load_renderer 'foo'
+    catch err
+      expect(err.message).toEqual "Couldn't load renderer 'foo'"
 
   it 'should return a function back if the loader exists', ->
     renderer = cobuild.load_renderer 'test2_r'
@@ -579,6 +594,9 @@ describe 'Cobuild build system', ->
       return
 
 
+# -------------------------------------------
+
+
 describe 'Built-in eco renderer', ->
 
   beforeEach ->
@@ -626,6 +644,9 @@ describe 'Built-in eco renderer', ->
       r.toEqual 'However, a raboof does not taste great with milk. <h1>foo</h1>.'
 
 
+# -------------------------------------------
+
+
 describe 'Built-in stylus renderer', ->
 
   beforeEach ->
@@ -655,4 +676,105 @@ describe 'Built-in stylus renderer', ->
     runs ->
       r = expect @data
       r.toEqual stylus_result
+
+
+# -------------------------------------------
+
+describe 'Connect middleware', ->
+
+    complete = 0
+    res_1    = ''
+    res_2    = ''
+
+    express = require 'express'
+
+    http    = require 'http'
+    app     = express.createServer()
+    port    = 1111
+
+    it 'should spawn an instance of a server and build on demand', ->
+      
+      runs ->
+
+        # We need a special config object to pass to our middleware constructor
+        test_config = 
+          options:
+            base_path:      "#{__dirname}/../"
+            renderer_path:  "spec/renderers/"
+            server_path:    "spec/output/web/"
+          files: [{
+                source:      'spec/samples/test1.html'
+                destination: 'spec/output/web/test1.html'
+              }
+              {
+                source:      'spec/samples/test1.html'
+                destination: 'spec/output/web/test0.html'
+              }]
+          renderers:
+            'html': [
+                "test_r"
+                "test2_r"
+              ]
+
+        # Configure the server with stylus and browserify middleware
+        app.configure ->
+          app.use app.router
+          app.use Cobuild.middleware test_config
+          app.use express.static "#{__dirname}/../spec/output/web/"
+
+        # Start the server
+        app.listen port
+
+      waits 500
+
+      runs ->
+
+        r1 = http.get
+            port: port
+            path: '/test1.html'
+          , (res)->
+            res.setEncoding 'utf8'
+            res.on 'error', (err)->
+              console.log err
+              return
+            res.on 'data', (data)->
+              console.log '////////////////////'
+              console.log data
+              console.log '////////////////////'
+              res_1 = data
+              complete++
+              return
+            return
+
+        r2 = http.get
+            port: port
+            path: '/test0.html'
+          , (res)->
+            res.setEncoding 'utf8'
+            res.on 'error', (err)->
+              console.log err
+              return
+            res.on 'data', (data)->
+              console.log '////////////////////'
+              console.log data
+              console.log '////////////////////'
+              res_2 = data
+              complete++
+              return
+            return
+
+
+      waitsFor ->
+        complete == 2
+      , 'callback never fired', 500
+
+      runs ->
+        expect(res_1).toEqual 'test_<html>foo</html>_test' #'foo'
+        expect(res_2).toEqual 'test_<html>foo</html>_test' #'bar'
+        app.close()
+        return
+
+
+
+
 

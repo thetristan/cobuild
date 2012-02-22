@@ -24,6 +24,10 @@ module.exports = class Cobuild
     @renderers        = {}
     @files_rendered   = []
 
+    # -------------------------------------------
+    # Middleware for connect
+    @middleware = require './middleware'
+
     @clean_up_config()
     
     @default_opts =
@@ -31,6 +35,9 @@ module.exports = class Cobuild
       postprocess: null
       replace:     false
       config:      @config
+
+
+
 
 
 
@@ -111,17 +118,18 @@ module.exports = class Cobuild
     # If it's a valid type, let's do our transform
     if @validate_type type
 
+      console.log "LOCK N LOAD...", source, destination
+
       # Load up our content
       util.load_files source, 
         (err, file)=>
 
-
           # If we're appending, is this the first time we're writing to this file? 
           # If so, log it and turn off the append feature for our first write
-          if !params.options.replace && _.indexOf(@files_rendered, params.file.source) == -1 
+          if !params.options.replace && _.indexOf(@files_rendered, params.file.destination) == -1 
             params.options.replace = true
             
-          @files_rendered.push params.file.source
+          @files_rendered.push params.file.destination
 
           @render file.content, type, params.options, 
             (err, content)->
@@ -331,3 +339,9 @@ module.exports = class Cobuild
         renderers.push r.renderer
 
     renderers
+
+
+
+# -------------------------------------------
+# Middleware for connect
+module.exports.middleware = require './middleware'
