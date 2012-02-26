@@ -21,7 +21,7 @@ class Eco_helpers
       content = fs.readFileSync "#{@base_path}#{template}", 'utf-8'
       eco.render content, context
     catch err
-      "<div class='error'>#{err}</div>"
+      "<div class='error'>Fatal error: #{err.message}</div>"
     
     
 ###
@@ -43,7 +43,7 @@ module.exports = class Eco_r
       context = new Eco_helpers(global, options.config.base_path)
       callback null, eco.render content, context
     catch err
-      callback null, err
+      callback null, "Fatal error: #{err.message}"
 
   
 
