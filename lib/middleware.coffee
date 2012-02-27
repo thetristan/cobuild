@@ -52,10 +52,6 @@ module.exports = (options) ->
           destination: "#{options.options.server_path}#{real_path}"
         ]
 
-    console.log '--------------------'
-    console.log files_to_build
-    console.log '--------------------'
-
     build.build
       files: files_to_build
       , (err, result)->

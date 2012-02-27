@@ -118,8 +118,6 @@ module.exports = class Cobuild
     # If it's a valid type, let's do our transform
     if @validate_type type
 
-      console.log "LOCK N LOAD...", source, destination
-
       # Load up our content
       util.load_files source, 
         (err, file)=>
