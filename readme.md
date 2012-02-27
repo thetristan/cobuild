@@ -235,7 +235,7 @@ Example of using the middleware:
             "tidy_r"
           ]
 
-    # Configure the server with stylus and browserify middleware
+    # Configure the server with our middleware
     app.configure ->
       app.use app.router
       app.use cobuild.middleware middleware_config
