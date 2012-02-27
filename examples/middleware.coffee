@@ -11,11 +11,11 @@ middleware_config =
     renderer_path:  "renderers/"
     server_path:    "output/web/"
   files: [{
-      source:      'source/foo.eco'
+      source:      'source/foo.html'
       destination: 'output/web/foo.html'
     }
     {
-      source:      'source/bar.eco'
+      source:      'source/bar.html'
       destination: 'output/web/bar.html'
     }]
   renderers:
