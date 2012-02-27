@@ -8,6 +8,7 @@
 3. [Build/Render Options](#options)
 4. [Advanced Methods](#advanced)
 5. [Creating Your Own Renderers](#renderers)
+6. [Middleware](#middleware)
 
 ---
 
@@ -198,4 +199,48 @@ You can always view the renderers in the lib/renderers folder for reference (the
         styl_opts.filename = options.file?.source || ''
         stylus.render content, styl_opts, callback
 
-        
+---
+
+<h3 id="middleware">Middleware</h3>
+
+Cobuild includes a middleware component that allows you to render assets on demand. When a request is made, cobuild checks to see if the URI matches the destination of any of the files passed to it. If it finds a match, it loads the source, renders it, and then saves the output back to the destination.
+
+The middleware component requires a different initialization object that specifies not only the configuration options (note that you need to specify the `server_path` in addition to everything else), but also all of the files cobuild needs to monitor for, and what rendererers need to be set up.
+
+Example of using the middleware:
+
+    cobuild = require '.cobuild'
+    express = require 'express'
+    http    = require 'http'
+    app     = express.createServer()
+    port    = 9999
+
+    # We need a special config object to pass to our middleware constructor
+    middleware_config = 
+      options:
+        base_path:      "#{__dirname}/"
+        renderer_path:  "renderers/"
+        server_path:    "output/web/"
+      files: [{
+          source:      'source/foo.eco'
+          destination: 'output/web/foo.html'
+        }
+        {
+          source:      'source/bar.eco'
+          destination: 'output/web/bar.html'
+        }]
+      renderers:
+        'html': [
+            "eco_r"
+            "tidy_r"
+          ]
+
+    # Configure the server with stylus and browserify middleware
+    app.configure ->
+      app.use app.router
+      app.use cobuild.middleware middleware_config
+      app.use express.static "#{__dirname}/output/web/"
+
+    # Start the server
+    app.listen port
+
