@@ -1,7 +1,6 @@
 
 fs       = require 'fs'
 _        = require 'underscore'
-colorize = require 'colorize'
 path     = require 'path'
 
 Cobuild  = require '../lib/cobuild'
@@ -23,19 +22,14 @@ test_config =
 * 
 ###
 
-console.log "Cobuild NodeJS tests"
-console.log "----------------------------------"
 
 # CLEAN UP
-console.log "\nCleaning up from previous tests..."
-
 if !path.existsSync "#{__dirname}/output/"
   fs.mkdir "#{__dirname}/output/"
 
 clean_up = (dir_name)->
   _.each fs.readdirSync(dir_name), (f) ->
     current_path = "#{dir_name}#{f}"
-    console.log colorize.ansify "#green[  removing #{current_path}]"
     if fs.lstatSync(current_path).isDirectory()
       current_path = "#{current_path}/"
       clean_up current_path
