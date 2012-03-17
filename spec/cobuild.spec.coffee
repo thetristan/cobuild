@@ -29,6 +29,9 @@ console.log "----------------------------------"
 # CLEAN UP
 console.log "\nCleaning up from previous tests..."
 
+if !path.existsSync "#{__dirname}/output/"
+  fs.mkdir "#{__dirname}/output/"
+
 clean_up = (dir_name)->
   _.each fs.readdirSync(dir_name), (f) ->
     current_path = "#{dir_name}#{f}"
