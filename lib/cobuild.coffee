@@ -124,20 +124,21 @@ module.exports = class Cobuild
 
           # If we're appending, is this the first time we're writing to this file? 
           # If so, log it and turn off the append feature for our first write
+          replace = params.options.replace
+
           if !params.options.replace && _.indexOf(@files_rendered, params.file.destination) == -1 
-            params.options.replace = true
-            
+            replace = true
+
           @files_rendered.push params.file.destination
 
-          @render file.content, type, params.options, 
+          @render file.content, type, params.options,
             (err, content)->
-              
-              util.save_file destination, content, params.options.replace, callback
+              util.save_file destination, content, replace, callback
               return
 
           return
-    
-    
+
+
     # Otherwise, copy the file to its destination
     else
       util.copy_file source, destination, params.options.replace, callback
@@ -152,7 +153,7 @@ module.exports = class Cobuild
     # Build each file
     async.forEachSeries params.files, 
       (f, next)=>
-        
+
         @build { file: f, type: params.type, options: params.options }, ->
           next()
         return

@@ -660,7 +660,7 @@ describe 'Built-in stylus renderer', ->
                         width 500px
                     '''
     stylus_result = "body h1 {\n  width: 500px;\n}\n"
-                    
+
     result = cobuild.build { string: stylus_css, type: 'styl' }, (err,data)=>
       complete = true
       @data = data
@@ -690,7 +690,7 @@ describe 'Connect middleware', ->
     port    = 1111
 
     it 'should spawn an instance of a server and build on demand', ->
-      
+
       runs ->
 
         # We need a special config object to pass to our middleware constructor
@@ -722,7 +722,14 @@ describe 'Connect middleware', ->
         # Start the server
         app.listen port
 
-      waits 500
+      waits 100
+
+      runs ->
+        r0 = http.get 
+            port: port
+            path: '/test0.html'
+
+      waits 100
 
       runs ->
 
@@ -731,16 +738,9 @@ describe 'Connect middleware', ->
             path: '/test1.html'
           , (res)->
             res.setEncoding 'utf8'
-            res.on 'error', (err)->
-              console.log err
-              return
             res.on 'data', (data)->
-              console.log '////////////////////'
-              console.log data
-              console.log '////////////////////'
               res_1 = data
               complete++
-              return
             return
 
         r2 = http.get
@@ -748,22 +748,15 @@ describe 'Connect middleware', ->
             path: '/test0.html'
           , (res)->
             res.setEncoding 'utf8'
-            res.on 'error', (err)->
-              console.log err
-              return
             res.on 'data', (data)->
-              console.log '////////////////////'
-              console.log data
-              console.log '////////////////////'
               res_2 = data
               complete++
-              return
             return
 
 
       waitsFor ->
         complete == 2
-      , 'callback never fired', 500
+      , 'callback never fired', 1000
 
       runs ->
         expect(res_1).toEqual 'test_<html>foo</html>_test' #'foo'

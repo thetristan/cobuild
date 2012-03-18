@@ -28,21 +28,21 @@ prep_content = (content, callback)->
 # Load file contents from an array
 load_files = (files, callback) ->
 
-  
+
 
   # Load file contents from a single file
   if _.isString files
-    
+
     content = load_file files, callback
 
   # Load file contents from multiple files
   if _.isArray files
-    
+
     content = []
 
     async.forEachSeries files, 
       (file, next) ->
-        
+
         load_file file,
           (err, data)->
             content.push data
