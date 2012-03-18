@@ -724,6 +724,7 @@ describe 'Connect middleware', ->
 
       waits 100
 
+      #TODO Find out why this extra request is needed before connect middleware starts working
       runs ->
         r0 = http.get 
             port: port
