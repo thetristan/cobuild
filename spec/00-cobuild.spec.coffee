@@ -65,8 +65,28 @@ describe 'Cobuild file detection', ->
 
 # -------------------------------------------
 
+describe 'Cobuild log utils', ->
 
-describe 'Cobuild render system', ->
+  
+  beforeEach ->
+    reset()  
+
+  it 'should create a new log when running a new build', ->
+    cobuild._reset_build_log()
+    expect(cobuild._build_log.length).toEqual(0)
+
+  it 'should return 0 for a destination that hasn\'t been logged yet', ->
+    expect(cobuild._log_file_count_by_dest 'foobar').toEqual 0
+
+  it 'should return count for all destinations', ->
+    cobuild._log_file 'foo', 'bar'
+    cobuild._log_file 'bar', 'bar'
+    cobuild._log_file 'foobar', 'foo'
+    expect(cobuild._log_file_count_by_dest 'foo').toEqual 1
+    expect(cobuild._log_file_count_by_dest 'bar').toEqual 2
+
+
+describe 'Cobuild core utils', ->
   
   beforeEach ->
     reset()  
@@ -301,10 +321,10 @@ describe 'Cobuild build system', ->
       r = expect fs.readdirSync("#{__dirname}/output/").length
       r.toEqual 2
 
-      r = expect fs.readFileSync("#{__dirname}/output/test1.html", 'utf-8')
+      r = expect fs.readFileSync("#{__dirname}/output/test1.html", 'utf8')
       r.toEqual "TEST_<html>foo</html>_TEST"
 
-      r = expect fs.readFileSync("#{__dirname}/output/test2.html", 'utf-8')
+      r = expect fs.readFileSync("#{__dirname}/output/test2.html", 'utf8')
       r.toEqual "TEST_<html>bar</html>_TEST"
 
       return
@@ -344,10 +364,10 @@ describe 'Cobuild build system', ->
       r = expect fs.readdirSync("#{__dirname}/output/").length
       r.toEqual 4
 
-      r = expect fs.readFileSync("#{__dirname}/output/test3.html", 'utf-8')
+      r = expect fs.readFileSync("#{__dirname}/output/test3.html", 'utf8')
       r.toEqual "TEST_<html>foo</html>_TEST"
 
-      r = expect fs.readFileSync("#{__dirname}/output/test4.html", 'utf-8')
+      r = expect fs.readFileSync("#{__dirname}/output/test4.html", 'utf8')
       r.toEqual "TEST_<html>bar</html>_TEST"
 
       return
@@ -385,10 +405,10 @@ describe 'Cobuild build system', ->
       r = expect fs.readdirSync("#{__dirname}/output/").length
       r.toEqual 6
 
-      r = expect fs.readFileSync("#{__dirname}/output/test5.html", 'utf-8')
+      r = expect fs.readFileSync("#{__dirname}/output/test5.html", 'utf8')
       r.toEqual "TEST_<html>foo</html>_TEST"
 
-      r = expect fs.readFileSync("#{__dirname}/output/test6.html", 'utf-8')
+      r = expect fs.readFileSync("#{__dirname}/output/test6.html", 'utf8')
       r.toEqual "FOO"
 
       return
@@ -431,10 +451,10 @@ describe 'Cobuild build system', ->
       r = expect fs.readdirSync("#{__dirname}/output/").length
       r.toEqual 8
 
-      r = expect fs.readFileSync("#{__dirname}/output/test7.html", 'utf-8')
+      r = expect fs.readFileSync("#{__dirname}/output/test7.html", 'utf8')
       r.toEqual "F"
 
-      r = expect fs.readFileSync("#{__dirname}/output/test8.html", 'utf-8')
+      r = expect fs.readFileSync("#{__dirname}/output/test8.html", 'utf8')
       r.toEqual "TEST_<html>bar</html>_TEST"
 
       return
@@ -481,10 +501,10 @@ describe 'Cobuild build system', ->
       r = expect fs.readdirSync("#{__dirname}/output/").length
       r.toEqual 10
 
-      r = expect fs.readFileSync("#{__dirname}/output/test9.html", 'utf-8')
+      r = expect fs.readFileSync("#{__dirname}/output/test9.html", 'utf8')
       r.toEqual "TEST_<html>bar</html>_TEST"
 
-      r = expect fs.readFileSync("#{__dirname}/output/test10.html", 'utf-8')
+      r = expect fs.readFileSync("#{__dirname}/output/test10.html", 'utf8')
       r.toEqual "TEST_<html>foo</html>_TESTTEST_<html>bar</html>_TEST"
 
 
@@ -589,4 +609,47 @@ describe 'Cobuild build system', ->
       r = expect fs.statSync("#{__dirname}/output/bar2.gif").size
       r.toEqual fs.statSync("#{__dirname}/samples/foo.gif").size
       return
+
+
+  it "should return an array containing the status of each file built", ->
+
+    complete = false
+    data = null
+
+    runs ()->
+      files = [{
+        source:      'spec/samples/test1.html'
+        destination: 'spec/output/test-status-ok.html'
+      }
+      {
+        source:      'spec/samples/test1.html'
+        destination: 'spec/output/test-status-ok2.html'
+      }
+      {
+        source:      'spec/samples/test1.html'
+        destination: 'spec/output/'
+      }]
+
+      result = cobuild.build { files: files, type: 'test' },
+        (err, result)->
+          complete = true
+          data = result
+          return
+
+      return
+
+    waitsFor ->
+        complete
+      , 'Callback never called', 500
+
+    runs ()->
+      expect(data).toBeDefined()
+      expect(data[0].status).toEqual Cobuild.OK
+      expect(data[1].status).toEqual Cobuild.OK
+      expect(data[2].status).toEqual Cobuild.ERR
+      return
+
+    return
+
+
 

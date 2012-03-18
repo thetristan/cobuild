@@ -68,7 +68,7 @@ load_file = (file, callback) ->
         callback "File #{file} doesn't exist.", null
       else
         
-        fs.readFile file, 'utf-8',
+        fs.readFile file, 'utf8',
           (err, data)->
             
             
@@ -181,13 +181,17 @@ save_file = (file, content, replace = false, callback) ->
     (next)->
       
       fs.open file, file_mode, (err, fd)->
-        
-        buffer = new Buffer(content, 'utf-8')
+        if (err)
+          next(err)
+          return
+
+        buffer = new Buffer(content, 'utf8')
         fs.write fd, buffer, 0, buffer.length, null, (err, written)->
-          
+          if (err) 
+            next(err)
+            return
           fs.close fd, (err)->
-            
-            next()
+            next(err)
             return
           return
         return
