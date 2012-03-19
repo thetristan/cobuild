@@ -203,11 +203,17 @@ You can always view the renderers in the lib/renderers folder for reference (the
 
 <h3 id="middleware">Middleware</h3>
 
-Cobuild includes a middleware component that allows you to render assets on demand. When a request is made, cobuild checks to see if the URI matches the destination of any of the files passed to it. If it finds a match, it loads the source, renders it, and then saves the output back to the destination.
+Cobuild includes a middleware component that allows you to render assets on demand. 
 
-The middleware component requires a different initialization object that specifies not only the configuration options (note that you need to specify the `server_path` in addition to everything else), but also all of the files cobuild needs to monitor for, and what rendererers need to be set up.
+There are two modes available when using the middleware.
 
-Example of using the middleware:
+The first mode allows you to specify explicit mapping between destination and source files. When a request is made, cobuild checks to see if the URI matches the destination of any of the files passed to it. If it finds a match, it loads the source, renders it, and then saves the output back to the destination.
+
+The second mode allows you to specify the `source_path` and `output_path` and cobuild will attempt to build any files requested if they exist in the `source_path`. Since you might be using different extensions for your files to identify what kind of file they are in your source folder, you can optionally pass alternate extensions that cobuild will check for when attempting to match a source file to the destination URI. Cobuild will render the first file it finds successfully.
+
+The middleware component requires a different initialization object that specifies not only the configuration options, but also additional settings specific to the middleware. These will be documented at a later time, but for now refer to the examples below.
+
+Example of using the middleware to render certain files explicitly (first mode):
 
     cobuild = require '.cobuild'
     express = require 'express'
@@ -220,20 +226,52 @@ Example of using the middleware:
       options:
         base_path:      "#{__dirname}/"
         renderer_path:  "renderers/"
-        server_path:    "output/web/"
+      middleware:
+        source_path:    "source/
+        output_path:    "output/web/"
       files: [{
-          source:      'source/foo.html'
-          destination: 'output/web/foo.html'
-        }
-        {
-          source:      'source/bar.html'
-          destination: 'output/web/bar.html'
+          source:      'foo.html'
+          destination: 'foo.html'
+        },{
+          source:      'bar.eco'
+          destination: 'bar.html'
         }]
       renderers:
-        'html': [
-            "eco_r"
-            "tidy_r"
-          ]
+        'eco':  [ 'eco_r' ]
+        'html': [ 'eco_r', "tidy_r" ]
+
+    # Configure the server with our middleware
+    app.configure ->
+      app.use app.router
+      app.use cobuild.middleware middleware_config
+      app.use express.static "#{__dirname}/output/web/"
+
+    # Start the server
+    app.listen port
+
+
+Example of using the middleware to render all files under `source_path` (second mode):
+
+    cobuild = require '.cobuild'
+    express = require 'express'
+    http    = require 'http'
+    app     = express.createServer()
+    port    = 9999
+
+    # We need a special config object to pass to our middleware constructor
+    middleware_config =
+      options:
+        base_path:      "#{__dirname}/"
+        renderer_path:  "renderers/"
+      middleware:
+        source_path:    "source/
+        output_path:    "output/web/"
+        extensions:
+          'html': [ 'eco' ]
+          'css':  [ 'styl', 'less' ]
+      renderers:
+        'eco':    [ 'eco_r' ]
+        'styl':   [ 'stlyus_r' ]
 
     # Configure the server with our middleware
     app.configure ->

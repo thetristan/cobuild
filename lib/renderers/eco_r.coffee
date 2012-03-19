@@ -22,8 +22,8 @@ class Eco_helpers
       eco.render content, context
     catch err
       "<div class='error'>Fatal error: #{err.message}</div>"
-    
-    
+
+
 ###
 * 
 * Eco/template builder class for Cobuild NodeJS build system

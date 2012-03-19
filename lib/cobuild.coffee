@@ -343,6 +343,12 @@ module.exports = class Cobuild
     @
 
 
+  # Add multiple renderers {'ext': [ 'renderers', ... ]}
+  add_renderers: (renderers) ->
+    _.each renderers, (val, key) =>
+      _.each val, (renderer) =>
+        @add_renderer key, renderer
+    @
 
 
   # Remove a renderer
