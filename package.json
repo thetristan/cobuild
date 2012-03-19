@@ -2,8 +2,8 @@
   "author": "Tristan Blease <tristan@bleaseinteractive.com> (http://tristanblease.com/)",
   "name": "cobuild",
   "description": "NodeJS build system with coffee-script, stylus, etc",
-  "version": "0.0.0",
-  "homepage": "http://tristanblease.com/projects/cobuild",
+  "version": "0.1.0",
+  "homepage": "http://github.com/thetristan/cobuild",
   "repository": {
     "type": "git",
     "url": "git://github.com/thetristan/cobuild.git"
