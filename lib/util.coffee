@@ -150,26 +150,22 @@ save_file = (file, content, callback) ->
 
     # Check the path first and create any needed directories
     (next)->
-
       check_fix_paths file, next
 
     # Deal with any existing files that need to be replaced
     (next)->
-
       path.exists file, (exists)->
         if exists
           fs.unlink file, next
           return
         else
           next()
-          return
-
-      return
 
     # Open the file and write the contents back to it
     (next)->
 
       fs.open file, file_mode, (err, fd)->
+
         if (err)
           next(err)
 
@@ -193,7 +189,7 @@ save_file = (file, content, callback) ->
 # Check and fix any paths by creating directories as needed
 check_fix_paths = (full_path, callback)->
 
-  current_path = '/'
+  current_path = ''
   full_path    = path.dirname full_path
   path_parts   = full_path.split '/'
 
