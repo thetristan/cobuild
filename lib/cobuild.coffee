@@ -25,8 +25,18 @@ module.exports = class Cobuild
     @renderers        = {}
     @files_rendered   = []
 
+
+    # -------------------------------------------
+    # Status messages used in the results we're returning back
+
+    @OK     = 'File built successfully'
+    @COPY   = 'File copied'
+    @SKIP   = 'File skipped'
+    @ERR    = 'Error building file'
+
     # -------------------------------------------
     # Middleware for connect
+
     @middleware = require './middleware'
 
     @clean_up_config()
@@ -403,13 +413,11 @@ module.exports = class Cobuild
 
 # -------------------------------------------
 # Middleware for connect
+
 module.exports.middleware = require './middleware'
 
-
-# -------------------------------------------
-# Status messages used in the results we're returning back
-module.exports.BUILT   = Cobuild.OK     = 'File built successfully'
-module.exports.COPIED  = Cobuild.COPY   = 'File copied'
-module.exports.SKIPPED = Cobuild.SKIP   = 'File skipped'
-module.exports.ERROR   = Cobuild.ERR    = 'Error building file'
+module.exports.OK     = 'File built successfully'
+module.exports.COPY   = 'File copied'
+module.exports.SKIP   = 'File skipped'
+module.exports.ERR    = 'Error building file'
 

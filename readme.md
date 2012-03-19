@@ -14,7 +14,7 @@
 
 <h3 id="intro">Introduction</h3>
 
-Cobuild isn't a build system, but it is a system that helps you build build systems faster. This asynchronous module allows you to pass one or more files through it to transform text-based content by sending it through one or more renderers based on their filetype.
+Cobuild isn't a build system, but it is a system that helps you build build systems faster. This (mostly) asynchronous module allows you to pass one or more files through it to transform text-based content by sending it through one or more renderers based on their filetype.
 
 You can quickly process your CSS, compress your JS, run your HTML through a template parser, or process any other text document... all through a single interface.
 
