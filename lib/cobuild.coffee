@@ -1,5 +1,6 @@
 _         = require 'underscore'
 path      = require 'path'
+fs        = require 'fs'
 async     = require 'async'
 util      = require './util'
 
@@ -144,39 +145,66 @@ module.exports = class Cobuild
     source      = "#{@config.base_path}#{params.file.source}"
     destination = "#{@config.base_path}#{params.file.destination}"
 
-    # If it's a valid type, let's do our transform
-    if @validate_type type
+    # Log it for later
+    log_item = @_log_file params.file.source, params.file.destination
 
-      # Load up our content
-      util.load_files source, 
-        (err, file)=>
+    # If we're appending, is this the first time we're writing to this file? 
+    # Logging the file will let us know, and then we can enable w mode for the first write
+    if !params.options.replace && (@_log_file_count_by_dest(params.file.destination) == 1)
+      params.options.replace = true
 
-          replace = params.options.replace
-
-          # If we're appending, is this the first time we're writing to this file? 
-          # Logging the file will let us know, and then we can enable w mode for the first write
-          log_item = @_log_file params.file.source, params.file.destination
-
-          if !params.options.replace && (@_log_file_count_by_dest(params.file.destination) == 1)
-            replace = true
-
-          @render file.content, type, params.options,
-            (err, content)->
-              util.save_file destination, content, replace, (err, result) ->
-                if err
-                  log_item.status = 'Error building file'
-                else
-                  log_item.status = 'File built successfully'
-
-                console.error log_item
-                callback err, result
-
-          return
+    replace = params.options.replace
 
 
-    # Otherwise, copy the file to its destination
-    else
+    # If it's not a valid type, let's copy and bail out
+    if !@validate_type type
       util.copy_file source, destination, params.options.replace, callback
+      log_item.status = 'File copied'
+      return
+
+    # Check the mtime between the source and the destination (if our destination already exists)
+    # if we're going to be replacing this file
+    if !params.options.force
+      destination_mtime = null
+      source_mtime      = null
+
+      if path.existsSync(destination)
+        destination_stat  = fs.statSync destination
+        destination_mtime = destination_stat.mtime.toString() if destination_stat.isFile()
+
+      if path.existsSync(source)
+        source_stat  = fs.statSync source
+        source_mtime = source_stat.mtime.toString() if source_stat.isFile()
+
+      console.error destination, destination_mtime, source_mtime
+
+
+      # Skip it for now
+      if destination_mtime == source_mtime
+        log_item.status = 'File skipped'
+        callback()
+        return
+
+    # Load up our content
+    util.load_files source,
+      (err, file)=>
+        console.error replace
+        @render file.content, type, params.options,
+          (err, content)->
+            util.save_file destination, content, replace, (err, result) ->
+              if err
+                log_item.status = 'Error building file'
+              else
+                log_item.status = 'File built successfully'
+
+              # Update mtimes so we don't rerender this later needlessly
+              now = new Date()
+              fs.utimesSync destination, now, now
+              fs.utimesSync source, now, now
+
+              callback err, result
+
+        return
 
     return @
 
@@ -386,6 +414,8 @@ module.exports.middleware = require './middleware'
 
 # -------------------------------------------
 # Status messages used in the results we're returning back
-module.exports.BUILT   = Cobuild.OK    = 'File built successfully'
-module.exports.ERROR   = Cobuild.ERR   = 'Error building file'
+module.exports.BUILT   = Cobuild.OK     = 'File built successfully'
+module.exports.COPIED  = Cobuild.COPY   = 'File copied'
+module.exports.SKIPPED = Cobuild.SKIP   = 'File skipped'
+module.exports.ERROR   = Cobuild.ERR    = 'Error building file'
 

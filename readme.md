@@ -140,7 +140,10 @@ The only three build-related options are callbacks that are ran on pre and post 
                              # Last chance to make changes before it's saved/output
                                
     replace: false           # Specifies whether cobuild should replace files 
-                             # or append to them when in 
+                             # or append to them when building
+
+    force: false             # Force cobuild to process this file even if the 
+                             # destination and source mtimes match
   
 Callbacks specified for preprocess/postprocess should be in the form of:
 

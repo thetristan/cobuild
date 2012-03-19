@@ -462,6 +462,7 @@ describe 'Cobuild build system', ->
   it 'should append content when files share the same destination unless replace is specified', ->
 
     complete = false
+    data = null
 
     runs ->
 
@@ -472,7 +473,7 @@ describe 'Cobuild build system', ->
             replace: true
         }
         {
-          source:      'spec/samples/test2.html'
+          source:      'spec/samples/test3.html'
           destination: 'spec/output/test9.html'
           options:
             replace: true
@@ -482,12 +483,13 @@ describe 'Cobuild build system', ->
           destination: 'spec/output/test10.html'
         }
         {
-          source:      'spec/samples/test2.html'
+          source:      'spec/samples/test4.html'
           destination: 'spec/output/test10.html'
         }]
 
-      result = cobuild.build { files: files }, ->
+      result = cobuild.build { files: files }, (err,result)->
         complete = true
+        data = result
 
       expect(result).toEqual cobuild
       return
@@ -497,16 +499,12 @@ describe 'Cobuild build system', ->
       , 'Callback never called', 500
 
     runs ->
+      console.error data
+      expect(fs.readdirSync("#{__dirname}/output/").length).toEqual 10
+      expect(fs.readFileSync("#{__dirname}/output/test9.html", 'utf8')).toEqual "TEST_<html>bar</html>_TEST"
+      expect(fs.readFileSync("#{__dirname}/output/test10.html", 'utf8')).toEqual "TEST_<html>foo</html>_TESTTEST_<html>bar</html>_TEST"
 
-      r = expect fs.readdirSync("#{__dirname}/output/").length
-      r.toEqual 10
-
-      r = expect fs.readFileSync("#{__dirname}/output/test9.html", 'utf8')
-      r.toEqual "TEST_<html>bar</html>_TEST"
-
-      r = expect fs.readFileSync("#{__dirname}/output/test10.html", 'utf8')
-      r.toEqual "TEST_<html>foo</html>_TESTTEST_<html>bar</html>_TEST"
-
+###
 
   it 'should copy files it has no idea what else to do with', ->
 
@@ -647,6 +645,56 @@ describe 'Cobuild build system', ->
       expect(data[0].status).toEqual Cobuild.OK
       expect(data[1].status).toEqual Cobuild.OK
       expect(data[2].status).toEqual Cobuild.ERR
+      return
+
+    return
+
+
+
+
+  it "shouldn't attempt to build files that haven't changed since the last build", ->
+
+    complete = false
+    data = null
+
+    runs ()->
+
+      #Set the mtime on the file to now to force a r
+      files = [{
+        source:      'spec/samples/test1.html'
+        destination: 'spec/output/test-mtime-noreplace.html'
+      }
+      {
+        source:      'spec/samples/test1.html'
+        destination: 'spec/output/test-mtime-noreplace.html'
+      }
+      {
+        source:      'spec/samples/test1.html'
+        destination: 'spec/output/test-mtime-replace.html'
+      }
+      {
+        source:      'spec/samples/test1.html'
+        destination: 'spec/output/test-mtime-replace.html'
+        options:
+          force: true
+      }]
+
+      result = cobuild.build { files: files, type: 'test' },
+        (err, result)->
+          complete = true
+          data = result
+          return
+
+      return
+
+    waitsFor ->
+        complete
+      , 'Callback never called', 500
+
+    runs ()->
+      expect(data[1].status).toEqual Cobuild.SKIPPED
+      expect(data[3].status).toEqual Cobuild.OK
+
       return
 
     return
