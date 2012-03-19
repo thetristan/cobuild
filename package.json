@@ -2,8 +2,8 @@
   "author": "Tristan Blease <tristan@bleaseinteractive.com> (http://tristanblease.com/)",
   "name": "cobuild",
   "description": "NodeJS build system with coffee-script, stylus, etc",
-  "version": "0.0.0",
-  "homepage": "http://tristanblease.com/projects/cobuild",
+  "version": "0.1.0",
+  "homepage": "http://github.com/thetristan/cobuild",
   "repository": {
     "type": "git",
     "url": "git://github.com/thetristan/cobuild.git"
@@ -16,12 +16,13 @@
     "express":">= 2.5.6",
     "clean-css":">= 0.3.2",
     "stylus":">= 0.22.6",
-    "uglify-js":">= 1.2.5",
     "async":">= 0.1.15",
     "underscore":">= 1.3.1",
     "eco":"1.1.0-rc3",
     "fs-extra":">= 0.0.3"
   },
-  "devDependencies": {},
+  "devDependencies": {
+    "jasmine-node":""
+  },
   "optionalDependencies": {}
 }

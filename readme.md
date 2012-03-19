@@ -8,16 +8,17 @@
 3. [Build/Render Options](#options)
 4. [Advanced Methods](#advanced)
 5. [Creating Your Own Renderers](#renderers)
+6. [Middleware](#middleware)
 
 ---
 
 <h3 id="intro">Introduction</h3>
 
-Cobuild isn't a build system, but it is a system that helps you build build systems faster. This asynchronous module allows you to pass one or more files through it to transform text-based content by sending it through one or more renderers based on their filetype. 
+Cobuild isn't a build system, but it is a system that helps you build build systems faster. This asynchronous module allows you to pass one or more files through it to transform text-based content by sending it through one or more renderers based on their filetype.
 
 You can quickly process your CSS, compress your JS, run your HTML through a template parser, or process any other text document... all through a single interface.
 
-Specifying the same destination for multiple text files will allow you to append multiple files onto a single file. If a renderer supports it, you can concatenate text files. Any files with unknown/unspecified content types are simply copied to their destinations, so you can pass in images and other files right alongside with your text files and they'll end up right where they belong.
+If a renderer supports it, you can concatenate text files. Any files with unknown/unspecified content types are simply copied to their destinations, so you can pass in images and other files right alongside with your text files and they'll end up right where they belong.
 
 All examples (as well as the module itself) are written in Coffeescript.
 
@@ -29,7 +30,7 @@ All examples (as well as the module itself) are written in Coffeescript.
     cobuild = require 'cobuild'
 
     # Create our builder and pass it our global configuration options
-    builder = new cobuild 
+    builder = new cobuild
       base_path:     "#{__dirname}/"
       renderer_path: "#{__dirname}/renderers/"
       eco:
@@ -55,7 +56,7 @@ All examples (as well as the module itself) are written in Coffeescript.
 
     # Options specific to the build we're going to run
     # In this case, we're overriding a global setting from above
-    options = 
+    options =
       stylus:
         foo: "foo"
 
@@ -92,15 +93,15 @@ Use Cobuild to transform the content based on what you pass in via the `params` 
 Render multiple files at once (or a single file you want to be saved after rendering):
 
     files: (array)     # An array of file objects (see below)
-                       # E.g. [{ source: 'src/my_file.html', 
+                       # E.g. [{ source: 'src/my_file.html',
                        # destination: 'release/my_file.html' }]
 
 Render one file at a time:
 
-    file: (string)    # String containing a file path relative 
+    file: (string)    # String containing a file path relative
                       # to the base_path (single file)
                       # E.g. 'src/my_file.html'
-                     
+
 Render a single string:
 
     string: (string)   # String containing the text you want to transform
@@ -108,44 +109,44 @@ Render a single string:
 
 Force cobuild to render content as a certain type (required if rendering a string)
 
-    type: (string)     # If a file is specified, the type is 
+    type: (string)     # If a file is specified, the type is
                        # automatically detected from the file extension,
-                       # but if specifying a string (or if you want to force 
+                       # but if specifying a string (or if you want to force
                        # files to be transformed as a certain type),
                        # E.g. 'html'
-                       
+
 Build-specific options. These will override any global settings you've already specified.
-                     
-    options: (object)  # Optional settings to be passed to the renderers. 
-                       # E.g. { stylus: { foo: "bar" } } 
-                       
+
+    options: (object)  # Optional settings to be passed to the renderers.
+                       # E.g. { stylus: { foo: "bar" } }
+
 If a renderer doesn't exist for the provided type, the method will copy the file to its destination (if specifying multiple files), or output the untransformed content when passing a single file or a string.
 
-The callback function takes two arguments, `err` and `result`. 
+The callback function takes two arguments, `err` and `result`.
 
 `err` will contain any uncatchable errors (if any) that were encountered when rendering the files, and `result` will contain the results of the build. If you specified multiple files, `result` will be a boolean `true` or `false`, if you specified a single file or string, `result` will contain the transformed text.
 
 ---
-		
+
 <h3 id="options">Build/Render Options</h3>
 
-The only three build-related options are callbacks that are ran on pre and post processing of content, and an option to replace files instead of appending content when multiple files are specified with the same output destination. These options can be overriden on a per-file basis using the `build` method above.
+The only three build-related options are callbacks that are ran on pre and post processing of content, and an option to force cobuild to build a file even if the destination and source seem to be unchanged (based on modification time). These options can be overriden on a per-file basis using the `build` method above.
 
-    preprocess: [callback]   # Process the content before it hits the 
+    preprocess: [callback]   # Process the content before it hits the
                              # rendering chain so you can strip metadata,
-                             # or do other transforms 
-                               
+                             # or do other transforms
+
     postprocess: [callback]  # Process the content after its been rendered
                              # Last chance to make changes before it's saved/output
-                               
-    replace: false           # Specifies whether cobuild should replace files 
-                             # or append to them when in 
-  
+
+    force: false             # Force cobuild to process this file even if the
+                             # destination and source modification times match
+
 Callbacks specified for preprocess/postprocess should be in the form of:
 
     postprocess: (content, type, options, callback) -> ...
 
-Where `content` is a string containing content being rendered, `type` is the type of content being rendered, `options` are the build-specific options passed to the current build process, and `callback` is the function you need to call after you're finished processing the content to continue the render process.  
+Where `content` is a string containing content being rendered, `type` is the type of content being rendered, `options` are the build-specific options passed to the current build process, and `callback` is the function you need to call after you're finished processing the content to continue the render process.
 
 The signature for this callback is:
 
@@ -175,7 +176,7 @@ This is where Cobuild really shines as it's easy to create pluggable renderers w
 
     render = (`content`, `type`, `options`, `callback`) -> ...
 
-It's your responsiblity to a return the string value of any transformations you make via the provided callback. 
+It's your responsiblity to a return the string value of any transformations you make via the provided callback.
 
     callback = (`err`, `rendered_content`) -> ...
 
@@ -191,9 +192,93 @@ To keep naming consistent and make renderers easily identifiable, the official r
 
 You can always view the renderers in the lib/renderers folder for reference (there are renderers for eco, stylus, and tidy), but here is a quick example of a renderer (in CoffeeScript):
 
-    module.exports = class Stylus_r 
+    module.exports = class Stylus_r
 
       render: (content, type, options, callback) ->
         styl_opts = options.stylus || {}
         styl_opts.filename = options.file?.source || ''
         stylus.render content, styl_opts, callback
+
+---
+
+<h3 id="middleware">Middleware</h3>
+
+Cobuild includes a middleware component that allows you to render assets on demand. 
+
+There are two modes available when using the middleware.
+
+The first mode allows you to specify explicit mapping between destination and source files. When a request is made, cobuild checks to see if the URI matches the destination of any of the files passed to it. If it finds a match, it loads the source, renders it, and then saves the output back to the destination.
+
+The second mode allows you to specify the `source_path` and `output_path` and cobuild will attempt to build any files requested if they exist in the `source_path`. Since you might be using different extensions for your files to identify what kind of file they are in your source folder, you can optionally pass alternate extensions that cobuild will check for when attempting to match a source file to the destination URI. Cobuild will render the first file it finds successfully.
+
+The middleware component requires a different initialization object that specifies not only the configuration options, but also additional settings specific to the middleware. These will be documented at a later time, but for now refer to the examples below.
+
+Example of using the middleware to render certain files explicitly (first mode):
+
+    cobuild = require '.cobuild'
+    express = require 'express'
+    http    = require 'http'
+    app     = express.createServer()
+    port    = 9999
+
+    # We need a special config object to pass to our middleware constructor
+    middleware_config =
+      options:
+        base_path:      "#{__dirname}/"
+        renderer_path:  "renderers/"
+      middleware:
+        source_path:    "source/
+        output_path:    "output/web/"
+      files: [{
+          source:      'foo.html'
+          destination: 'foo.html'
+        },{
+          source:      'bar.eco'
+          destination: 'bar.html'
+        }]
+      renderers:
+        'eco':  [ 'eco_r' ]
+        'html': [ 'eco_r', "tidy_r" ]
+
+    # Configure the server with our middleware
+    app.configure ->
+      app.use app.router
+      app.use cobuild.middleware middleware_config
+      app.use express.static "#{__dirname}/output/web/"
+
+    # Start the server
+    app.listen port
+
+
+Example of using the middleware to render all files under `source_path` (second mode):
+
+    cobuild = require '.cobuild'
+    express = require 'express'
+    http    = require 'http'
+    app     = express.createServer()
+    port    = 9999
+
+    # We need a special config object to pass to our middleware constructor
+    middleware_config =
+      options:
+        base_path:      "#{__dirname}/"
+        renderer_path:  "renderers/"
+      middleware:
+        source_path:    "source/
+        output_path:    "output/web/"
+        extensions:
+          'html': [ 'eco' ]
+          'css':  [ 'styl', 'less' ]
+      renderers:
+        'eco':    [ 'eco_r' ]
+        'styl':   [ 'stlyus_r' ]
+
+    # Configure the server with our middleware
+    app.configure ->
+      app.use app.router
+      app.use cobuild.middleware middleware_config
+      app.use express.static "#{__dirname}/output/web/"
+
+    # Start the server
+    app.listen port
+
