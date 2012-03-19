@@ -1,5 +1,6 @@
 _         = require 'underscore'
 path      = require 'path'
+fs        = require 'fs'
 async     = require 'async'
 util      = require './util'
 
@@ -31,13 +32,10 @@ module.exports = class Cobuild
     @clean_up_config()
     
     @default_opts =
-      preprocess:   null
+      preprocess:  null
       postprocess: null
-      replace:     false
+      force:       false
       config:      @config
-
-
-
 
 
 
@@ -53,9 +51,41 @@ module.exports = class Cobuild
 
 
   # -------------------------------------------
+  # Build log handling
+  # This log gets returned for all multi-file builds
+
+  # Reset the log (done with each build)
+  _reset_build_log: ->
+    @_build_log = []
+    return
+
+
+  # Log a file and return the item we just added
+  _log_file: (source, destination, status = null) ->
+
+    if !@_build_log then @_reset_build_log()
+
+    log_item =
+      source:      source
+      destination: destination
+      status:      status
+
+    @_build_log.push log_item
+    
+    log_item
+
+  # Get the count per destination
+  _log_file_count_by_dest: (destination) ->
+    _.reduce @_build_log, 
+      (count, log_item) -> 
+        count + (log_item.destination == destination ? 1 : 0)
+      , 0
+
+
+  # -------------------------------------------
   # Build+render methods
 
-  _build_string: (params, callback) ->      
+  _build_string: (params, callback) ->
 
     if !params.type?
       callback 'You must specify a type if passing a string to the build method', null
@@ -72,7 +102,7 @@ module.exports = class Cobuild
 
 
   _build_single_file: (params, callback) ->
-    
+
     # Determine the type
     type = params.type if params.type? 
     type or= @get_type(params.file)
@@ -100,7 +130,7 @@ module.exports = class Cobuild
   _build_single_file_object: (params, callback) ->
 
     @validate_file params.file
-    
+
     # Determine the type
     type = params.type if params.type? 
     type or= @get_type(params.file)
@@ -115,33 +145,54 @@ module.exports = class Cobuild
     source      = "#{@config.base_path}#{params.file.source}"
     destination = "#{@config.base_path}#{params.file.destination}"
 
-    # If it's a valid type, let's do our transform
-    if @validate_type type
+    # Log it for later
+    log_item = @_log_file params.file.source, params.file.destination
 
-      # Load up our content
-      util.load_files source, 
-        (err, file)=>
+    # Check the mtime between the source and the destination (if our destination already exists)
+    # if we're going to be replacing this file
+    if !params.options.force
+      destination_mtime = null
+      source_mtime      = null
 
-          # If we're appending, is this the first time we're writing to this file? 
-          # If so, log it and turn off the append feature for our first write
-          replace = params.options.replace
+      if path.existsSync(destination)
+        destination_stat  = fs.statSync destination
+        destination_mtime = destination_stat.mtime.toString() if destination_stat.isFile()
 
-          if !params.options.replace && _.indexOf(@files_rendered, params.file.destination) == -1 
-            replace = true
+      if path.existsSync(source)
+        source_stat  = fs.statSync source
+        source_mtime = source_stat.mtime.toString() if source_stat.isFile()
 
-          @files_rendered.push params.file.destination
+      # Skip it for now
+      if destination_mtime == source_mtime
+        log_item.status = 'File skipped'
+        callback()
+        return
 
-          @render file.content, type, params.options,
-            (err, content)->
-              util.save_file destination, content, replace, callback
-              return
+    # If it's not a valid type, let's copy and bail out
+    if !@validate_type type
+      util.copy_file source, destination, callback
+      log_item.status = 'File copied'
+      return
 
-          return
+    # Load up our content
+    util.load_files source,
+      (err, file)=>
+        @render file.content, type, params.options,
+          (err, content)->
+            util.save_file destination, content, (err) ->
+              if err
+                log_item.status = 'Error building file'
+              else
+                log_item.status = 'File built successfully'
 
+              # Update mtimes so we don't rerender this later needlessly
+              now = new Date()
+              fs.utimesSync destination, now, now
+              fs.utimesSync source, now, now
 
-    # Otherwise, copy the file to its destination
-    else
-      util.copy_file source, destination, params.options.replace, callback
+              callback err
+
+        return
 
     return @
 
@@ -150,6 +201,9 @@ module.exports = class Cobuild
 
   _build_multiple_files: (params, callback) ->
 
+    # Reset our build log
+    @_reset_build_log()
+
     # Build each file
     async.forEachSeries params.files, 
       (f, next)=>
@@ -157,9 +211,9 @@ module.exports = class Cobuild
         @build { file: f, type: params.type, options: params.options }, ->
           next()
         return
-      (err)->
-        
-        callback err
+
+      (err)=>
+        callback err, @_build_log
         return
 
     return @
@@ -194,7 +248,7 @@ module.exports = class Cobuild
 
     # Single file as an object
     if single_file_obj
-      return @_build_single_file_object params, callback        
+      return @_build_single_file_object params, callback
 
     return @
 
@@ -203,7 +257,7 @@ module.exports = class Cobuild
 
   # Render text via one of our preset renderers
   render: (content, type, opts, callback) -> 
-    
+
     renderers = @get_renderers type
 
     async.waterfall [
@@ -268,7 +322,7 @@ module.exports = class Cobuild
 
   # Validate file to make sure it contains all the needed items.
   validate_file: (file) ->
-    
+
     throw new Error 'Source is a required field' unless file.source and _.isString file.source
     throw new Error 'Destination is a required field' unless file.destination and _.isString file.destination
     throw new Error 'Type must be specified as a string' if file.type and !_.isString file.type
@@ -290,7 +344,7 @@ module.exports = class Cobuild
 
 
 
-  
+
   # Remove a renderer
   remove_renderer: (type, renderer) ->
     if renderer
@@ -302,7 +356,7 @@ module.exports = class Cobuild
 
 
 
-  
+
   # Attempt to load a renderer, or return null if it can't be loaded
   load_renderer: (renderer) ->
     # Probably a cleaner way to do this...
@@ -344,3 +398,12 @@ module.exports = class Cobuild
 # -------------------------------------------
 # Middleware for connect
 module.exports.middleware = require './middleware'
+
+
+# -------------------------------------------
+# Status messages used in the results we're returning back
+module.exports.BUILT   = Cobuild.OK     = 'File built successfully'
+module.exports.COPIED  = Cobuild.COPY   = 'File copied'
+module.exports.SKIPPED = Cobuild.SKIP   = 'File skipped'
+module.exports.ERROR   = Cobuild.ERR    = 'Error building file'
+
