@@ -7,6 +7,16 @@ Cobuild = require './cobuild'
 util    = require './util'
 
 
+###
+* 
+* Cobuild Middleware
+*
+* @author Tristan Blease
+* @version 0.1.0
+* 
+###
+
+
 module.exports = (options) ->
 
   throw new Error 'cobuild.middleware() requires a Cobuild configuration' unless options.options
