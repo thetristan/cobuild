@@ -18,7 +18,7 @@ test_config =
 * Cobuild Middleware tests
 *
 * @author Tristan Blease
-* @version 0.1.0
+* @version 0.1.1
 * 
 ###
 
