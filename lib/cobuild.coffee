@@ -32,9 +32,9 @@ module.exports = class Cobuild
     @clean_up_config()
     
     @default_opts =
-      preprocess:   null
+      preprocess:  null
       postprocess: null
-      replace:     false
+      force:       false
       config:      @config
 
 
@@ -148,20 +148,6 @@ module.exports = class Cobuild
     # Log it for later
     log_item = @_log_file params.file.source, params.file.destination
 
-    # If we're appending, is this the first time we're writing to this file? 
-    # Logging the file will let us know, and then we can enable w mode for the first write
-    if !params.options.replace && (@_log_file_count_by_dest(params.file.destination) == 1)
-      params.options.replace = true
-
-    replace = params.options.replace
-
-
-    # If it's not a valid type, let's copy and bail out
-    if !@validate_type type
-      util.copy_file source, destination, params.options.replace, callback
-      log_item.status = 'File copied'
-      return
-
     # Check the mtime between the source and the destination (if our destination already exists)
     # if we're going to be replacing this file
     if !params.options.force
@@ -176,22 +162,24 @@ module.exports = class Cobuild
         source_stat  = fs.statSync source
         source_mtime = source_stat.mtime.toString() if source_stat.isFile()
 
-      console.error destination, destination_mtime, source_mtime
-
-
       # Skip it for now
       if destination_mtime == source_mtime
         log_item.status = 'File skipped'
         callback()
         return
 
+    # If it's not a valid type, let's copy and bail out
+    if !@validate_type type
+      util.copy_file source, destination, callback
+      log_item.status = 'File copied'
+      return
+
     # Load up our content
     util.load_files source,
       (err, file)=>
-        console.error replace
         @render file.content, type, params.options,
           (err, content)->
-            util.save_file destination, content, replace, (err, result) ->
+            util.save_file destination, content, (err) ->
               if err
                 log_item.status = 'Error building file'
               else
@@ -202,7 +190,7 @@ module.exports = class Cobuild
               fs.utimesSync destination, now, now
               fs.utimesSync source, now, now
 
-              callback err, result
+              callback err
 
         return
 
