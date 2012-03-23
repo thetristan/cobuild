@@ -6,12 +6,12 @@ util      = require './util'
 
 
 ###
-* 
+*
 * Cobuild NodeJS build system
 *
 * @author Tristan Blease
-* @version 0.1.1
-* 
+* @version 0.1.3
+*
 ###
 
 
@@ -40,7 +40,7 @@ module.exports = class Cobuild
     @middleware = require './middleware'
 
     @clean_up_config()
-    
+
     @default_opts =
       preprocess:  null
       postprocess: null
@@ -81,13 +81,13 @@ module.exports = class Cobuild
       status:      status
 
     @_build_log.push log_item
-    
+
     log_item
 
   # Get the count per destination
   _log_file_count_by_dest: (destination) ->
-    _.reduce @_build_log, 
-      (count, log_item) -> 
+    _.reduce @_build_log,
+      (count, log_item) ->
         count + (log_item.destination == destination ? 1 : 0)
       , 0
 
@@ -114,20 +114,20 @@ module.exports = class Cobuild
   _build_single_file: (params, callback) ->
 
     # Determine the type
-    type = params.type if params.type? 
+    type = params.type if params.type?
     type or= @get_type(params.file)
 
     if !@validate_type type
       callback "No valid renderers added for '#{type}' files", null
       return @
 
-    params.options.file = 
+    params.options.file =
       source: params.file
       destination: null
-      type: type 
+      type: type
       options: params.options
 
-    util.load_file "#{@config.base_path}/#{params.file}", 
+    util.load_file "#{@config.base_path}/#{params.file}",
       (err, file)=>
         @render file.content, type, params.options, callback
         return
@@ -142,7 +142,7 @@ module.exports = class Cobuild
     @validate_file params.file
 
     # Determine the type
-    type = params.type if params.type? 
+    type = params.type if params.type?
     type or= @get_type(params.file)
 
     # Do we have any file-specific overrides?
@@ -196,9 +196,8 @@ module.exports = class Cobuild
                 log_item.status = 'File built successfully'
 
               # Update mtimes so we don't rerender this later needlessly
-              now = new Date()
-              fs.utimesSync destination, now, now
-              fs.utimesSync source, now, now
+              source_mtime = fs.statSync(source).mtime.toString()
+              fs.utimesSync destination, source_mtime, source_mtime
 
               callback err
 
@@ -215,7 +214,7 @@ module.exports = class Cobuild
     @_reset_build_log()
 
     # Build each file
-    async.forEachSeries params.files, 
+    async.forEachSeries params.files,
       (f, next)=>
 
         @build { file: f, type: params.type, options: params.options }, ->
@@ -231,7 +230,7 @@ module.exports = class Cobuild
 
 
 
-  # Build one or more files 
+  # Build one or more files
   build: (params, callback) ->
 
     single_string    = params.string?
@@ -266,7 +265,7 @@ module.exports = class Cobuild
 
 
   # Render text via one of our preset renderers
-  render: (content, type, opts, callback) -> 
+  render: (content, type, opts, callback) ->
 
     renderers = @get_renderers type
 
@@ -281,7 +280,7 @@ module.exports = class Cobuild
 
       # Main rendering loop
       (content, next)->
-        async.reduce renderers, content, 
+        async.reduce renderers, content,
           (curr_content, curr_renderer, cb)->
             result = curr_renderer?.render? curr_content, type, opts, cb
             if result == null then cb null, curr_content
@@ -376,7 +375,7 @@ module.exports = class Cobuild
   # Attempt to load a renderer, or return null if it can't be loaded
   load_renderer: (renderer) ->
     # Probably a cleaner way to do this...
-    result = null 
+    result = null
     try
       current_path = "#{@config.base_path}#{@config.renderer_path}#{renderer}"
       result = require current_path
@@ -394,7 +393,7 @@ module.exports = class Cobuild
 
 
   # Load and initialize the renderer we want to use
-  get_renderers: (type) ->    
+  get_renderers: (type) ->
     renderers = []
 
     _.each @renderers[type], (r, i)=>

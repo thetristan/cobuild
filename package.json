@@ -1,8 +1,8 @@
 {
   "author": "Tristan Blease <tristan@bleaseinteractive.com> (http://tristanblease.com/)",
   "name": "cobuild",
-  "description": "Cobuild is a system that helps you build build systems faster.",
-  "version": "0.1.2",
+  "description": "Cobuild isn't a build system, but it is a system that helps you build build systems faster.",
+  "version": "0.1.3",
   "homepage": "http://github.com/thetristan/cobuild",
   "repository": {
     "type": "git",
