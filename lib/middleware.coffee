@@ -8,12 +8,12 @@ util    = require './util'
 
 
 ###
-* 
+*
 * Cobuild Middleware
 *
 * @author Tristan Blease
-* @version 0.1.1
-* 
+* @version 0.1.3
+*
 ###
 
 
@@ -72,7 +72,7 @@ module.exports = (options) ->
   # Add our renderers
   build.add_renderers options.renderers
 
-  # The actual middleware 
+  # The actual middleware
   return (req,res,next) ->
 
     # Only service GET/HEAD requests
