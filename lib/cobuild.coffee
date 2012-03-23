@@ -10,7 +10,7 @@ util      = require './util'
 * Cobuild NodeJS build system
 *
 * @author Tristan Blease
-* @version 0.1.3
+* @version 0.1.4
 *
 ###
 
@@ -18,24 +18,22 @@ util      = require './util'
 
 module.exports = class Cobuild
 
+  # -------------------------------------------
+  # Status messages used in the results we're returning back
+  OK:         'File built successfully'
+  COPY:       'File copied'
+  SKIP:       'File skipped'
+  ERR:        'Error building file'
+
+
+  # -------------------------------------------
+  # Constructor
   constructor: (@config) ->
 
     # Load our configuration
     throw new Error 'Config options must be specified to use cobuild.' unless @config
     @renderers        = {}
     @files_rendered   = []
-
-
-    # -------------------------------------------
-    # Status messages used in the results we're returning back
-
-    @OK     = 'File built successfully'
-    @COPY   = 'File copied'
-    @SKIP   = 'File skipped'
-    @ERR    = 'Error building file'
-
-    # -------------------------------------------
-    # Middleware for connect
 
     @middleware = require './middleware'
 
@@ -174,14 +172,14 @@ module.exports = class Cobuild
 
       # Skip it for now
       if destination_mtime == source_mtime
-        log_item.status = 'File skipped'
+        log_item.status = Cobuild.SKIP
         callback()
         return
 
     # If it's not a valid type, let's copy and bail out
     if !@validate_type type
       util.copy_file source, destination, callback
-      log_item.status = 'File copied'
+      log_item.status = Cobuild.COPY
       return
 
     # Load up our content
@@ -191,12 +189,12 @@ module.exports = class Cobuild
           (err, content)->
             util.save_file destination, content, (err) ->
               if err
-                log_item.status = 'Error building file'
+                log_item.status = Cobuild.ERR
               else
-                log_item.status = 'File built successfully'
+                log_item.status = Cobuild.OK
 
               # Update mtimes so we don't rerender this later needlessly
-              source_mtime = fs.statSync(source).mtime.toString()
+              source_mtime = fs.statSync(source).mtime
               fs.utimesSync destination, source_mtime, source_mtime
 
               callback err
@@ -414,9 +412,4 @@ module.exports = class Cobuild
 # Middleware for connect
 
 module.exports.middleware = require './middleware'
-
-module.exports.OK     = 'File built successfully'
-module.exports.COPY   = 'File copied'
-module.exports.SKIP   = 'File skipped'
-module.exports.ERR    = 'Error building file'
 
