@@ -495,7 +495,7 @@ describe 'Cobuild build system', ->
       r = expect fs.statSync("#{__dirname}/output/bar.gif").size
       r.toEqual fs.statSync("#{__dirname}/samples/foo.gif").size
 
-      expect(data[0].status).toEqual Cobuild.COPIED
+      expect(data[0].status).toEqual Cobuild.COPY
 
       return
 
@@ -617,7 +617,7 @@ describe 'Cobuild build system', ->
       , 'Callback never called', 500
 
     runs ->
-      expect(data[1].status).toEqual Cobuild.SKIPPED
+      expect(data[1].status).toEqual Cobuild.SKIP
       expect(data[3].status).toEqual Cobuild.OK
 
       return

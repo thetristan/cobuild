@@ -12,7 +12,7 @@ util    = require './util'
 * Cobuild Middleware
 *
 * @author Tristan Blease
-* @version 0.1.3
+* @version 0.1.4
 *
 ###
 
