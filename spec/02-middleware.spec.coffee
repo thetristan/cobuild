@@ -5,21 +5,21 @@ path     = require 'path'
 
 Cobuild  = require '../lib/cobuild'
 
-test_config = 
+test_config =
   base_path:      "#{__dirname}/../"
   renderer_path:  "spec/renderers/"
   eco:
-    global: 
+    global:
       test_var:   'foobar'
       test_var_2: 'raboof'
 
 ###
-* 
+*
 * Cobuild Middleware tests
 *
 * @author Tristan Blease
-* @version 0.1.1
-* 
+* @version 0.1.5
+*
 ###
 
 ###
@@ -57,7 +57,7 @@ describe 'Connect middleware', ->
 
       runs ->
 
-        test_config = 
+        test_config =
           options:
             base_path:      "#{__dirname}/../"
             renderer_path:  "spec/renderers/"
@@ -127,7 +127,7 @@ describe 'Connect middleware', ->
 
       runs ->
 
-        test_config = 
+        test_config =
           options:
             base_path:      "#{__dirname}/../"
             renderer_path:  "spec/renderers/"
