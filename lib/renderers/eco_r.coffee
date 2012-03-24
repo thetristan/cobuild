@@ -3,12 +3,12 @@ eco    = require 'eco'
 fs     = require 'fs'
 
 ###
-* 
+*
 * Eco/template helper class for Cobuild NodeJS build system
 *
 * @author Tristan Blease
-* @version 0.0.1.1 
-* 
+* @version 0.1.5
+*
 ###
 
 class Eco_helpers
@@ -25,12 +25,12 @@ class Eco_helpers
 
 
 ###
-* 
+*
 * Eco/template builder class for Cobuild NodeJS build system
 *
 * @author Tristan Blease
-* @version 0.0.1.1 
-* 
+* @version 0.0.1.1
+*
 ###
 
 module.exports = class Eco_r
@@ -39,11 +39,11 @@ module.exports = class Eco_r
 
   render: (content, type, options, callback) ->
     try
-      global  = options.config.eco?.global || {} 
+      global  = options.config.eco?.global || {}
       context = new Eco_helpers(global, options.config.base_path)
       callback null, eco.render content, context
     catch err
       callback null, "Fatal error: #{err.message}"
 
-  
+
 

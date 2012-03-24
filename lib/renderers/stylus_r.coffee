@@ -1,15 +1,15 @@
 stylus  = require 'stylus'
-    
-    
+
+
 ###
 * Stylus class for Cobuild NodeJS build system
 *
 * @author Tristan Blease
-* @version 0.0.1.1
-* 
+* @version 0.1.5
+*
 ###
 
-module.exports = class Stylus_r 
+module.exports = class Stylus_r
 
   constructor: ->
 
