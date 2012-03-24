@@ -5,21 +5,21 @@ path     = require 'path'
 
 Cobuild  = require '../lib/cobuild'
 
-test_config = 
+test_config =
   base_path:      "#{__dirname}/../"
   renderer_path:  "spec/renderers/"
   eco:
-    global: 
+    global:
       test_var:   'foobar'
       test_var_2: 'raboof'
 
 ###
-* 
+*
 * Cobuild Renderer tests
 *
 * @author Tristan Blease
-* @version 0.1.1
-* 
+* @version 0.1.5
+*
 ###
 
 
@@ -48,15 +48,15 @@ reset = ->
 describe 'Built-in eco renderer', ->
 
   beforeEach ->
-    reset()  
+    reset()
     cobuild
       .add_renderer('eco', "eco_r")
 
   it 'should render an eco template with a global variable', ->
     complete = false
-    
+
     runs ->
-      cobuild.build { string: 'A <%= @global.test_var %> tastes great with milk.', type: 'eco' }, 
+      cobuild.build { string: 'A <%= @global.test_var %> tastes great with milk.', type: 'eco' },
         (err,data)=>
           complete = true
           @data = data
@@ -74,9 +74,9 @@ describe 'Built-in eco renderer', ->
 
   it 'should render an partial template', ->
     complete = false
-    
+
     runs ->
-      cobuild.build { string: 'However, a <%= @global.test_var_2 %> does not taste great with milk. <%- @partial "spec/samples/test4.eco", { sample_var: "foo" } %>.', type: 'eco' }, 
+      cobuild.build { string: 'However, a <%= @global.test_var_2 %> does not taste great with milk. <%- @partial "spec/samples/test4.eco", { sample_var: "foo" } %>.', type: 'eco' },
         (err,data)=>
           complete = true
           @data = data
@@ -98,7 +98,7 @@ describe 'Built-in eco renderer', ->
 describe 'Built-in stylus renderer', ->
 
   beforeEach ->
-    reset()  
+    reset()
     cobuild
       .add_renderer('styl', "stylus_r")
 
