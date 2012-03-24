@@ -158,48 +158,51 @@ module.exports = class Cobuild
 
     # Check the mtime between the source and the destination (if our destination already exists)
     # if we're going to be replacing this file
-    if !params.options.force
-      destination_mtime = null
-      source_mtime      = null
 
-      if path.existsSync(destination)
-        destination_stat  = fs.statSync destination
-        destination_mtime = destination_stat.mtime.toString() if destination_stat.isFile()
+    async.parallel
+      destination_mtime: (next)->
+        path.exists destination, (exists)->
+          fs.stat destination, (err, stat)->
+            result = null
+            result = stat.mtime.toString() if stat?.isFile()
+            next null, result
 
-      if path.existsSync(source)
-        source_stat  = fs.statSync source
-        source_mtime = source_stat.mtime.toString() if source_stat.isFile()
+      source_mtime: (next)->
+        path.exists source, (exists)->
+          fs.stat source, (err, stat)->
+            result = null
+            result = stat.mtime.toString() if stat?.isFile()
+            next null, result
 
-      # Skip it for now
-      if destination_mtime == source_mtime
+    , (err, results)=>
+      if !params.options.force && results.destination_mtime == results.source_mtime
         log_item.status = Cobuild.SKIP
-        callback()
+        return callback()
+
+      # If it's not a valid type, let's copy and bail out
+      if !@validate_type type
+        util.copy_file source, destination, callback
+        log_item.status = Cobuild.COPY
         return
 
-    # If it's not a valid type, let's copy and bail out
-    if !@validate_type type
-      util.copy_file source, destination, callback
-      log_item.status = Cobuild.COPY
-      return
+      # Load up our content
+      util.load_files source,
+        (err, file)=>
+          @render file.content, type, params.options,
+            (err, content)->
+              util.save_file destination, content, (err) ->
+                if err
+                  log_item.status = Cobuild.ERR
+                else
+                  log_item.status = Cobuild.OK
 
-    # Load up our content
-    util.load_files source,
-      (err, file)=>
-        @render file.content, type, params.options,
-          (err, content)->
-            util.save_file destination, content, (err) ->
-              if err
-                log_item.status = Cobuild.ERR
-              else
-                log_item.status = Cobuild.OK
+                # Update mtimes so we don't rerender this later needlessly
+                source_mtime = fs.statSync(source).mtime
+                fs.utimesSync destination, source_mtime, source_mtime
 
-              # Update mtimes so we don't rerender this later needlessly
-              source_mtime = fs.statSync(source).mtime
-              fs.utimesSync destination, source_mtime, source_mtime
+                callback err
 
-              callback err
-
-        return
+          return
 
     return @
 
