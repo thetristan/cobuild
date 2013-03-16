@@ -2,6 +2,10 @@
 
 ---
 
+*Deprecation notice:* I am no longer maintaining Cobuild as of March 16, 2013. There are plenty of other [awesome tools](http://gruntjs.com/) available for helping you roll your own build system. In the future I might revisit this idea and/or replace it with something completely new.
+
+---
+
 1. [Introduction](#intro)
 2. [Basic Usage](#usage)
 2. [Basic Methods](#basic)
@@ -203,7 +207,7 @@ You can always view the renderers in the lib/renderers folder for reference (the
 
 <h3 id="middleware">Middleware</h3>
 
-Cobuild includes a middleware component that allows you to render assets on demand. 
+Cobuild includes a middleware component that allows you to render assets on demand.
 
 There are two modes available when using the middleware.
 
